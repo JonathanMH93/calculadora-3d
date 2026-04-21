@@ -1,105 +1,196 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Calculadora Impresión 3D</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <link rel="manifest" href="manifest.json">
+<title>Calculadora 3D PRO</title>
 
-  <style>
-    body {
-      font-family: Arial;
-      background: #f4f6f8;
-      padding: 20px;
-    }
-    .card {
-      background: white;
-      padding: 20px;
-      border-radius: 12px;
-      max-width: 400px;
-      margin: auto;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-    h2 { text-align: center; }
-    input {
-      width: 100%;
-      padding: 8px;
-      margin: 5px 0 10px;
-    }
-    button {
-      width: 100%;
-      padding: 12px;
-      background: #007bff;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 16px;
-    }
-    .result {
-      margin-top: 15px;
-      font-size: 18px;
-    }
-  </style>
+<link rel="manifest" href="manifest.json">
+
+<style>
+:root {
+  --primary: #2563eb;
+  --bg: #0f172a;
+  --card: #1e293b;
+  --text: #f1f5f9;
+  --accent: #22c55e;
+}
+
+body {
+  margin: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.container {
+  max-width: 420px;
+  margin: auto;
+  padding: 20px;
+}
+
+.card {
+  background: var(--card);
+  padding: 18px;
+  border-radius: 16px;
+  margin-bottom: 15px;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+}
+
+h2 {
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+label {
+  font-size: 13px;
+  opacity: 0.8;
+}
+
+input {
+  width: 100%;
+  padding: 10px;
+  margin: 5px 0 10px;
+  border-radius: 10px;
+  border: none;
+  outline: none;
+  background: #334155;
+  color: white;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+button {
+  width: 100%;
+  padding: 14px;
+  background: var(--primary);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.result {
+  text-align: center;
+  font-size: 18px;
+}
+
+.total {
+  font-size: 26px;
+  color: var(--accent);
+  margin-top: 10px;
+}
+</style>
 </head>
 
 <body>
 
-<div class="card">
-  <h2>💰 Impresión 3D</h2>
+<div class="container">
 
-  <label>Filamento usado (gr)</label>
-  <input type="number" id="filamento">
+  <h2>🧾 Calculadora 3D PRO</h2>
 
-  <label>Horas</label>
-  <input type="number" id="horas">
+  <div class="card">
+    <label>Filamento (gr)</label>
+    <input type="number" id="filamento">
 
-  <label>Minutos</label>
-  <input type="number" id="minutos">
+    <label>Extra Filamento (%)</label>
+    <input type="number" id="extraFil" value="20">
+  </div>
 
-  <label>Lijado ($)</label>
-  <input type="number" id="lijado" value="0">
+  <div class="card grid">
+    <div>
+      <label>Horas</label>
+      <input type="number" id="horas">
+    </div>
+    <div>
+      <label>Minutos</label>
+      <input type="number" id="minutos">
+    </div>
+  </div>
 
-  <label>Pintado ($)</label>
-  <input type="number" id="pintado" value="0">
+  <div class="card">
+    <label>Extra Tiempo (%)</label>
+    <input type="number" id="extraTime" value="10">
+  </div>
 
-  <button onclick="calcular()">Calcular</button>
+  <div class="card grid">
+    <div>
+      <label>Lijado ($)</label>
+      <input type="number" id="lijado" value="0">
+    </div>
+    <div>
+      <label>Pintado ($)</label>
+      <input type="number" id="pintado" value="0">
+    </div>
+  </div>
 
-  <div class="result">
+  <div class="card">
+    <label>Ganancia (%)</label>
+    <input type="number" id="ganancia" value="60">
+  </div>
+
+  <button onclick="calcular()">CALCULAR</button>
+
+  <div class="card result">
     <p>Filamento: $ <span id="r_fil">0</span></p>
     <p>Tiempo: $ <span id="r_time">0</span></p>
-    <p>Ganancia: $ <span id="r_gain">0</span></p>
+    <p>Extras: $ <span id="r_extra">0</span></p>
     <hr>
-    <strong>Total: $ <span id="total">0</span></strong>
+    <div class="total">$ <span id="total">0</span></div>
   </div>
+
 </div>
 
 <script>
 function calcular() {
+
   let fil = parseFloat(document.getElementById("filamento").value) || 0;
+  let extraFil = parseFloat(document.getElementById("extraFil").value) || 0;
+
   let h = parseFloat(document.getElementById("horas").value) || 0;
   let m = parseFloat(document.getElementById("minutos").value) || 0;
+  let extraTime = parseFloat(document.getElementById("extraTime").value) || 0;
+
   let lijado = parseFloat(document.getElementById("lijado").value) || 0;
   let pintado = parseFloat(document.getElementById("pintado").value) || 0;
 
-  // CONFIG (de tu Excel)
-  let costoFilamentoKg = 20;
-  let gramosPorKg = 1000;
-  let costoHoraMaquina = 0.23;
+  let ganancia = (parseFloat(document.getElementById("ganancia").value) || 0) / 100;
+
+  // CONFIG
+  let costoKg = 20;
+  let costoHora = 0.23;
   let energiaHora = 0.20;
-  let ganancia = 0.60;
 
-  let costoFil = (fil / gramosPorKg) * costoFilamentoKg;
-  let tiempoHoras = h + (m / 60);
-  let costoTiempo = tiempoHoras * (costoHoraMaquina + energiaHora);
+  // FILAMENTO con extra
+  let filConExtra = fil * (1 + extraFil / 100);
+  let costoFil = (filConExtra / 1000) * costoKg;
 
+  // TIEMPO con extra
+  let tiempo = (h + m / 60) * (1 + extraTime / 100);
+  let costoTiempo = tiempo * (costoHora + energiaHora);
+
+  // SUBTOTAL
   let subtotal = costoFil + costoTiempo + lijado + pintado;
+
   let total = subtotal * (1 + ganancia);
 
+  // UI
   document.getElementById("r_fil").innerText = costoFil.toFixed(2);
   document.getElementById("r_time").innerText = costoTiempo.toFixed(2);
-  document.getElementById("r_gain").innerText = (subtotal * ganancia).toFixed(2);
+  document.getElementById("r_extra").innerText = (lijado + pintado).toFixed(2);
   document.getElementById("total").innerText = total.toFixed(2);
+}
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
 }
 </script>
 
