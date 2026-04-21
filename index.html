@@ -10,16 +10,16 @@
 
 <style>
 :root {
-  --primary: #2563eb;
   --bg: #0f172a;
   --card: #1e293b;
+  --primary: #2563eb;
   --text: #f1f5f9;
   --accent: #22c55e;
 }
 
 body {
   margin: 0;
-  font-family: 'Segoe UI', sans-serif;
+  font-family: Arial;
   background: var(--bg);
   color: var(--text);
 }
@@ -27,64 +27,56 @@ body {
 .container {
   max-width: 420px;
   margin: auto;
-  padding: 20px;
+  padding: 15px;
+}
+
+.tabs {
+  display: flex;
+  margin-bottom: 10px;
+}
+
+.tab {
+  flex: 1;
+  padding: 10px;
+  text-align: center;
+  background: #334155;
+  cursor: pointer;
+}
+
+.active {
+  background: var(--primary);
 }
 
 .card {
   background: var(--card);
-  padding: 18px;
-  border-radius: 16px;
-  margin-bottom: 15px;
-  box-shadow: 0 5px 20px rgba(0,0,0,0.3);
-}
-
-h2 {
-  text-align: center;
-  margin-bottom: 15px;
-}
-
-label {
-  font-size: 13px;
-  opacity: 0.8;
+  padding: 15px;
+  border-radius: 12px;
+  margin-bottom: 10px;
 }
 
 input {
   width: 100%;
-  padding: 10px;
-  margin: 5px 0 10px;
-  border-radius: 10px;
+  padding: 8px;
+  margin: 5px 0;
+  border-radius: 8px;
   border: none;
-  outline: none;
   background: #334155;
   color: white;
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
 button {
   width: 100%;
-  padding: 14px;
+  padding: 12px;
   background: var(--primary);
   border: none;
-  border-radius: 12px;
+  border-radius: 10px;
   color: white;
-  font-size: 16px;
-  font-weight: bold;
-}
-
-.result {
-  text-align: center;
-  font-size: 18px;
 }
 
 .total {
-  font-size: 26px;
+  font-size: 24px;
+  text-align: center;
   color: var(--accent);
-  margin-top: 10px;
 }
 </style>
 </head>
@@ -93,105 +85,152 @@ button {
 
 <div class="container">
 
-  <h2>🧾 Calculadora 3D PRO</h2>
-
-  <div class="card">
-    <label>Filamento (gr)</label>
-    <input type="number" id="filamento">
-
-    <label>Extra Filamento (%)</label>
-    <input type="number" id="extraFil" value="20">
+  <div class="tabs">
+    <div class="tab active" onclick="mostrar('calc')">💰 Calcular</div>
+    <div class="tab" onclick="mostrar('config')">⚙️ Config</div>
   </div>
 
-  <div class="card grid">
-    <div>
+  <!-- PANTALLA CALCULAR -->
+  <div id="calc">
+
+    <div class="card">
+      <label>Filamento (gr)</label>
+      <input type="number" id="filamento">
+    </div>
+
+    <div class="card">
       <label>Horas</label>
       <input type="number" id="horas">
-    </div>
-    <div>
       <label>Minutos</label>
       <input type="number" id="minutos">
     </div>
-  </div>
 
-  <div class="card">
-    <label>Extra Tiempo (%)</label>
-    <input type="number" id="extraTime" value="10">
-  </div>
-
-  <div class="card grid">
-    <div>
+    <div class="card">
       <label>Lijado ($)</label>
       <input type="number" id="lijado" value="0">
-    </div>
-    <div>
       <label>Pintado ($)</label>
       <input type="number" id="pintado" value="0">
     </div>
+
+    <button onclick="calcular()">CALCULAR</button>
+
+    <div class="card total">
+      $ <span id="total">0</span>
+    </div>
+
   </div>
 
-  <div class="card">
-    <label>Ganancia (%)</label>
-    <input type="number" id="ganancia" value="60">
-  </div>
+  <!-- PANTALLA CONFIG -->
+  <div id="config" style="display:none">
 
-  <button onclick="calcular()">CALCULAR</button>
+    <div class="card">
+      <label>% Extra Filamento</label>
+      <input type="number" id="extraFil">
+    </div>
 
-  <div class="card result">
-    <p>Filamento: $ <span id="r_fil">0</span></p>
-    <p>Tiempo: $ <span id="r_time">0</span></p>
-    <p>Extras: $ <span id="r_extra">0</span></p>
-    <hr>
-    <div class="total">$ <span id="total">0</span></div>
+    <div class="card">
+      <label>% Extra Tiempo</label>
+      <input type="number" id="extraTime">
+    </div>
+
+    <div class="card">
+      <label>% Ganancia</label>
+      <input type="number" id="ganancia">
+    </div>
+
+    <div class="card">
+      <label>Costo kg ($)</label>
+      <input type="number" id="costoKg">
+
+      <label>Costo hora máquina ($)</label>
+      <input type="number" id="costoHora">
+
+      <label>Energía hora ($)</label>
+      <input type="number" id="energiaHora">
+    </div>
+
+    <button onclick="guardar()">GUARDAR CONFIG</button>
+
   </div>
 
 </div>
 
 <script>
+
+// CONFIG DEFAULT
+let config = {
+  extraFil: 20,
+  extraTime: 10,
+  ganancia: 60,
+  costoKg: 20,
+  costoHora: 0.23,
+  energiaHora: 0.20
+};
+
+// CARGAR CONFIG
+function cargarConfig() {
+  let data = localStorage.getItem("config3d");
+  if (data) config = JSON.parse(data);
+
+  document.getElementById("extraFil").value = config.extraFil;
+  document.getElementById("extraTime").value = config.extraTime;
+  document.getElementById("ganancia").value = config.ganancia;
+  document.getElementById("costoKg").value = config.costoKg;
+  document.getElementById("costoHora").value = config.costoHora;
+  document.getElementById("energiaHora").value = config.energiaHora;
+}
+
+// GUARDAR CONFIG
+function guardar() {
+  config.extraFil = parseFloat(extraFil.value);
+  config.extraTime = parseFloat(extraTime.value);
+  config.ganancia = parseFloat(ganancia.value);
+  config.costoKg = parseFloat(costoKg.value);
+  config.costoHora = parseFloat(costoHora.value);
+  config.energiaHora = parseFloat(energiaHora.value);
+
+  localStorage.setItem("config3d", JSON.stringify(config));
+  alert("Configuración guardada");
+}
+
+// CALCULAR
 function calcular() {
 
-  let fil = parseFloat(document.getElementById("filamento").value) || 0;
-  let extraFil = parseFloat(document.getElementById("extraFil").value) || 0;
+  let fil = parseFloat(filamento.value) || 0;
+  let h = parseFloat(horas.value) || 0;
+  let m = parseFloat(minutos.value) || 0;
+  let lijado = parseFloat(lijado.value) || 0;
+  let pintado = parseFloat(pintado.value) || 0;
 
-  let h = parseFloat(document.getElementById("horas").value) || 0;
-  let m = parseFloat(document.getElementById("minutos").value) || 0;
-  let extraTime = parseFloat(document.getElementById("extraTime").value) || 0;
+  let filExtra = fil * (1 + config.extraFil / 100);
+  let costoFil = (filExtra / 1000) * config.costoKg;
 
-  let lijado = parseFloat(document.getElementById("lijado").value) || 0;
-  let pintado = parseFloat(document.getElementById("pintado").value) || 0;
+  let tiempo = (h + m/60) * (1 + config.extraTime / 100);
+  let costoTiempo = tiempo * (config.costoHora + config.energiaHora);
 
-  let ganancia = (parseFloat(document.getElementById("ganancia").value) || 0) / 100;
-
-  // CONFIG
-  let costoKg = 20;
-  let costoHora = 0.23;
-  let energiaHora = 0.20;
-
-  // FILAMENTO con extra
-  let filConExtra = fil * (1 + extraFil / 100);
-  let costoFil = (filConExtra / 1000) * costoKg;
-
-  // TIEMPO con extra
-  let tiempo = (h + m / 60) * (1 + extraTime / 100);
-  let costoTiempo = tiempo * (costoHora + energiaHora);
-
-  // SUBTOTAL
   let subtotal = costoFil + costoTiempo + lijado + pintado;
+  let total = subtotal * (1 + config.ganancia / 100);
 
-  let total = subtotal * (1 + ganancia);
-
-  // UI
-  document.getElementById("r_fil").innerText = costoFil.toFixed(2);
-  document.getElementById("r_time").innerText = costoTiempo.toFixed(2);
-  document.getElementById("r_extra").innerText = (lijado + pintado).toFixed(2);
   document.getElementById("total").innerText = total.toFixed(2);
 }
-</script>
 
-<script>
+// CAMBIAR PANTALLA
+function mostrar(tab) {
+  document.getElementById("calc").style.display = tab === 'calc' ? 'block' : 'none';
+  document.getElementById("config").style.display = tab === 'config' ? 'block' : 'none';
+
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+// INIT
+cargarConfig();
+
+// SERVICE WORKER
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js');
 }
+
 </script>
 
 </body>
