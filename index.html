@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Calculadora Impresión 3D</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link rel="manifest" href="manifest.json">
+
+  <style>
+    body {
+      font-family: Arial;
+      background: #f4f6f8;
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      max-width: 400px;
+      margin: auto;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h2 { text-align: center; }
+    input {
+      width: 100%;
+      padding: 8px;
+      margin: 5px 0 10px;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+    .result {
+      margin-top: 15px;
+      font-size: 18px;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="card">
+  <h2>💰 Impresión 3D</h2>
+
+  <label>Filamento usado (gr)</label>
+  <input type="number" id="filamento">
+
+  <label>Horas</label>
+  <input type="number" id="horas">
+
+  <label>Minutos</label>
+  <input type="number" id="minutos">
+
+  <label>Lijado ($)</label>
+  <input type="number" id="lijado" value="0">
+
+  <label>Pintado ($)</label>
+  <input type="number" id="pintado" value="0">
+
+  <button onclick="calcular()">Calcular</button>
+
+  <div class="result">
+    <p>Filamento: $ <span id="r_fil">0</span></p>
+    <p>Tiempo: $ <span id="r_time">0</span></p>
+    <p>Ganancia: $ <span id="r_gain">0</span></p>
+    <hr>
+    <strong>Total: $ <span id="total">0</span></strong>
+  </div>
+</div>
+
+<script>
+function calcular() {
+  let fil = parseFloat(document.getElementById("filamento").value) || 0;
+  let h = parseFloat(document.getElementById("horas").value) || 0;
+  let m = parseFloat(document.getElementById("minutos").value) || 0;
+  let lijado = parseFloat(document.getElementById("lijado").value) || 0;
+  let pintado = parseFloat(document.getElementById("pintado").value) || 0;
+
+  // CONFIG (de tu Excel)
+  let costoFilamentoKg = 20;
+  let gramosPorKg = 1000;
+  let costoHoraMaquina = 0.23;
+  let energiaHora = 0.20;
+  let ganancia = 0.60;
+
+  let costoFil = (fil / gramosPorKg) * costoFilamentoKg;
+  let tiempoHoras = h + (m / 60);
+  let costoTiempo = tiempoHoras * (costoHoraMaquina + energiaHora);
+
+  let subtotal = costoFil + costoTiempo + lijado + pintado;
+  let total = subtotal * (1 + ganancia);
+
+  document.getElementById("r_fil").innerText = costoFil.toFixed(2);
+  document.getElementById("r_time").innerText = costoTiempo.toFixed(2);
+  document.getElementById("r_gain").innerText = (subtotal * ganancia).toFixed(2);
+  document.getElementById("total").innerText = total.toFixed(2);
+}
+</script>
+
+</body>
+</html>
