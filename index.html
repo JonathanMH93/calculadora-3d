@@ -203,32 +203,32 @@ function cargarConfig(){
   let data = localStorage.getItem("config3d");
   if(data) config = JSON.parse(data);
 
-  extraFil.value = config.extraFil;
-  extraTime.value = config.extraTime;
-  ganancia.value = config.ganancia;
-  costoKg.value = config.costoKg;
-  costoHora.value = config.costoHora;
-  energiaHora.value = config.energiaHora;
+  document.getElementById("extraFil").value = config.extraFil;
+  document.getElementById("extraTime").value = config.extraTime;
+  document.getElementById("ganancia").value = config.ganancia;
+  document.getElementById("costoKg").value = config.costoKg;
+  document.getElementById("costoHora").value = config.costoHora;
+  document.getElementById("energiaHora").value = config.energiaHora;
 }
 
 // GUARDAR CONFIG
 function guardarConfig(){
-  config.extraFil = parseFloat(extraFil.value)||0;
-  config.extraTime = parseFloat(extraTime.value)||0;
-  config.ganancia = parseFloat(ganancia.value)||0;
-  config.costoKg = parseFloat(costoKg.value)||0;
-  config.costoHora = parseFloat(costoHora.value)||0;
-  config.energiaHora = parseFloat(energiaHora.value)||0;
+  config.extraFil = parseFloat(document.getElementById("extraFil").value)||0;
+  config.extraTime = parseFloat(document.getElementById("extraTime").value)||0;
+  config.ganancia = parseFloat(document.getElementById("ganancia").value)||0;
+  config.costoKg = parseFloat(document.getElementById("costoKg").value)||0;
+  config.costoHora = parseFloat(document.getElementById("costoHora").value)||0;
+  config.energiaHora = parseFloat(document.getElementById("energiaHora").value)||0;
 
   localStorage.setItem("config3d", JSON.stringify(config));
-  alert("Guardado");
+  alert("Configuración guardada");
 }
 
 // CALCULAR
 function calcular(){
-  let fil = parseFloat(filamento.value)||0;
-  let h = parseFloat(horas.value)||0;
-  let m = parseFloat(minutos.value)||0;
+  let fil = parseFloat(document.getElementById("filamento").value)||0;
+  let h = parseFloat(document.getElementById("horas").value)||0;
+  let m = parseFloat(document.getElementById("minutos").value)||0;
 
   let filExtra = fil*(1+config.extraFil/100);
   let costoFil = (filExtra/1000)*config.costoKg;
@@ -247,14 +247,17 @@ function calcular(){
 
 // ABRIR COTIZAR
 function abrirCotizar(){
-  mostrar('quotes', document.querySelectorAll('.tab')[2]);
+  let tabs = document.querySelectorAll('.tab');
+  if(tabs[2]){
+    mostrar('quotes', tabs[2]);
+  }
 }
 
 // GUARDAR COTIZACION
 function guardarCotizacion(){
 
+  let file = document.getElementById("foto").files[0];
   let reader = new FileReader();
-  let file = foto.files[0];
 
   if(file){
     reader.onload = function(){
@@ -270,9 +273,9 @@ function guardarFinal(img){
 
   let cot = {
     ...ultima,
-    desc: desc.value,
-    link: link.value,
-    extra: configExtra.value,
+    desc: document.getElementById("desc").value,
+    link: document.getElementById("link").value,
+    extra: document.getElementById("configExtra").value,
     img: img,
     fecha: new Date().toLocaleString()
   };
@@ -282,10 +285,10 @@ function guardarFinal(img){
 
   localStorage.setItem("cotizaciones", JSON.stringify(lista));
 
-  desc.value="";
-  link.value="";
-  configExtra.value="";
-  foto.value="";
+  document.getElementById("desc").value="";
+  document.getElementById("link").value="";
+  document.getElementById("configExtra").value="";
+  document.getElementById("foto").value="";
 
   cargarCotizaciones();
 }
@@ -303,7 +306,7 @@ function cargarCotizaciones(){
       ⚖️ ${c.fil}gr<br>
       ⏱️ ${c.h}h ${c.m}m<br>
       📅 ${c.fecha}<br>
-      ${c.link ? `<a href="${c.link}" target="_blank">Ver enlace</a>`:""}
+      ${c.link ? `<a href="${c.link}" target="_blank">Ver enlace</a><br>`:""}
       ${c.img ? `<img src="${c.img}">`:""}
     </div>
     `;
@@ -314,9 +317,10 @@ function cargarCotizaciones(){
 
 // TABS
 function mostrar(tab, el){
-  calc.style.display = tab=='calc'?'block':'none';
-  config.style.display = tab=='config'?'block':'none';
-  quotes.style.display = tab=='quotes'?'block':'none';
+
+  document.getElementById("calc").style.display = tab=='calc'?'block':'none';
+  document.getElementById("config").style.display = tab=='config'?'block':'none';
+  document.getElementById("quotes").style.display = tab=='quotes'?'block':'none';
 
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
