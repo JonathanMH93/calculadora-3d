@@ -71,13 +71,15 @@ button {
   border: none;
   border-radius: 10px;
   color: white;
+  font-size: 16px;
 }
 
 .total {
-  font-size: 24px;
+  font-size: 26px;
   text-align: center;
   color: var(--accent);
 }
+
 </style>
 </head>
 
@@ -86,8 +88,8 @@ button {
 <div class="container">
 
   <div class="tabs">
-    <div class="tab active" onclick="mostrar('calc')">💰 Calcular</div>
-    <div class="tab" onclick="mostrar('config')">⚙️ Config</div>
+    <div class="tab active" onclick="mostrar('calc', this)">💰 Calcular</div>
+    <div class="tab" onclick="mostrar('config', this)">⚙️ Config</div>
   </div>
 
   <!-- PANTALLA CALCULAR -->
@@ -103,13 +105,6 @@ button {
       <input type="number" id="horas">
       <label>Minutos</label>
       <input type="number" id="minutos">
-    </div>
-
-    <div class="card">
-      <label>Lijado ($)</label>
-      <input type="number" id="lijado" value="0">
-      <label>Pintado ($)</label>
-      <input type="number" id="pintado" value="0">
     </div>
 
     <button onclick="calcular()">CALCULAR</button>
@@ -157,7 +152,7 @@ button {
 
 <script>
 
-// CONFIG DEFAULT
+// CONFIG POR DEFECTO
 let config = {
   extraFil: 20,
   extraTime: 10,
@@ -182,12 +177,12 @@ function cargarConfig() {
 
 // GUARDAR CONFIG
 function guardar() {
-  config.extraFil = parseFloat(extraFil.value);
-  config.extraTime = parseFloat(extraTime.value);
-  config.ganancia = parseFloat(ganancia.value);
-  config.costoKg = parseFloat(costoKg.value);
-  config.costoHora = parseFloat(costoHora.value);
-  config.energiaHora = parseFloat(energiaHora.value);
+  config.extraFil = parseFloat(document.getElementById("extraFil").value) || 0;
+  config.extraTime = parseFloat(document.getElementById("extraTime").value) || 0;
+  config.ganancia = parseFloat(document.getElementById("ganancia").value) || 0;
+  config.costoKg = parseFloat(document.getElementById("costoKg").value) || 0;
+  config.costoHora = parseFloat(document.getElementById("costoHora").value) || 0;
+  config.energiaHora = parseFloat(document.getElementById("energiaHora").value) || 0;
 
   localStorage.setItem("config3d", JSON.stringify(config));
   alert("Configuración guardada");
@@ -196,11 +191,9 @@ function guardar() {
 // CALCULAR
 function calcular() {
 
-  let fil = parseFloat(filamento.value) || 0;
-  let h = parseFloat(horas.value) || 0;
-  let m = parseFloat(minutos.value) || 0;
-  let lijado = parseFloat(lijado.value) || 0;
-  let pintado = parseFloat(pintado.value) || 0;
+  let fil = parseFloat(document.getElementById("filamento").value) || 0;
+  let h = parseFloat(document.getElementById("horas").value) || 0;
+  let m = parseFloat(document.getElementById("minutos").value) || 0;
 
   let filExtra = fil * (1 + config.extraFil / 100);
   let costoFil = (filExtra / 1000) * config.costoKg;
@@ -208,19 +201,19 @@ function calcular() {
   let tiempo = (h + m/60) * (1 + config.extraTime / 100);
   let costoTiempo = tiempo * (config.costoHora + config.energiaHora);
 
-  let subtotal = costoFil + costoTiempo + lijado + pintado;
+  let subtotal = costoFil + costoTiempo;
   let total = subtotal * (1 + config.ganancia / 100);
 
   document.getElementById("total").innerText = total.toFixed(2);
 }
 
 // CAMBIAR PANTALLA
-function mostrar(tab) {
+function mostrar(tab, el) {
   document.getElementById("calc").style.display = tab === 'calc' ? 'block' : 'none';
   document.getElementById("config").style.display = tab === 'config' ? 'block' : 'none';
 
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  event.target.classList.add('active');
+  el.classList.add('active');
 }
 
 // INIT
