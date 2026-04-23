@@ -1,10 +1,225 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>3D App PRO</title>
+
+<style>
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: Arial;
+  background:#0f172a;
+  color:white;
+  margin:0;
+}
+
+.container {
+  max-width:1000px;
+  margin:auto;
+  padding:20px;
+}
+
+.tabs {
+  display:flex;
+  gap:5px;
+  margin-bottom:15px;
+}
+
+.tab {
+  flex:1;
+  padding:12px;
+  background:#334155;
+  cursor:pointer;
+  text-align:center;
+  border-radius:8px;
+}
+
+.active { background:#2563eb; }
+
+.card {
+  background:#1e293b;
+  padding:15px;
+  margin-bottom:10px;
+  border-radius:12px;
+}
+
+input, textarea {
+  width:100%;
+  padding:12px;
+  margin:6px 0;
+  background:#334155;
+  color:white;
+  border:none;
+  border-radius:8px;
+}
+
+label {
+  font-size:13px;
+  color:#94a3b8;
+  display:block;
+  margin-top:8px;
+}
+
+button {
+  padding:10px;
+  margin:3px;
+  background:#2563eb;
+  color:white;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+}
+
+.line {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+}
+
+.total {
+  font-size:22px;
+  color:#22c55e;
+}
+
+img {
+  max-width:120px;
+  border-radius:8px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="tabs">
+  <div class="tab active" onclick="mostrar('calc',this)">💰 Calcular</div>
+  <div class="tab" onclick="mostrar('quotes',this)">📦 Cotizaciones</div>
+  <div class="tab" onclick="mostrar('sales',this)">💵 Ventas</div>
+  <div class="tab" onclick="mostrar('config',this)">⚙️ Config</div>
+</div>
+
+<!-- CALC -->
+<div id="calc">
+<div class="card">
+<label>Filamento (gr)</label>
+<input id="fil">
+
+<label>Horas</label>
+<input id="h">
+
+<label>Minutos</label>
+<input id="m">
+</div>
+
+<button onclick="calcular()">Calcular</button>
+
+<div class="card total">
+$ <span id="total">0</span>
+</div>
+
+<button id="btnCot" style="display:none" onclick="irCot()">📌 Cotizar</button>
+</div>
+
+<!-- COTIZACIONES -->
+<div id="quotes" style="display:none">
+
+<div class="card">
+<label>Descripción</label>
+<textarea id="desc"></textarea>
+
+<label>Enlace</label>
+<input id="link">
+
+<label>Foto</label>
+<input type="file" id="foto">
+
+<label>Observaciones</label>
+<textarea id="obs"></textarea>
+
+<button onclick="guardarCot()">Guardar cotización</button>
+</div>
+
+<div id="listaCot"></div>
+<div id="detalle"></div>
+
+</div>
+
+<!-- VENTAS -->
+<div id="sales" style="display:none">
+
+<div class="card">
+<label>Cliente</label>
+<input id="cliente">
+
+<label>Precio</label>
+<input id="precio">
+
+<label>Figura</label>
+<input id="figura">
+
+<div style="display:flex;align-items:center;gap:8px;margin-top:10px">
+  <input type="checkbox" id="pagado">
+  <span>Pagado</span>
+</div>
+
+<button onclick="guardarVenta()">Guardar venta</button>
+</div>
+
+<div>
+<button onclick="filtroVenta('all')">Todos</button>
+<button onclick="filtroVenta('pagado')">Pagados</button>
+<button onclick="filtroVenta('pendiente')">Pendientes</button>
+</div>
+
+<div id="listaVentas"></div>
+
+<div class="card">
+💵 Pagado: $ <span id="tPagado">0</span><br>
+🧾 Pendiente: $ <span id="tPend">0</span><br>
+<div class="total">📊 Total: $ <span id="tTotal">0</span></div>
+</div>
+
+</div>
+
+<!-- CONFIG -->
+<div id="config" style="display:none">
+<div class="card">
+
+<label>Costo kg filamento</label>
+<input id="costoKg">
+
+<label>% extra filamento</label>
+<input id="extraFil">
+
+<label>% extra tiempo</label>
+<input id="extraTime">
+
+<label>Costo máquina por hora</label>
+<input id="costoHora">
+
+<label>Costo energía (kWh)</label>
+<input id="costoEnergia">
+
+<button onclick="guardarConfig()">Guardar configuración</button>
+
+</div>
+</div>
+
+</div>
+
+<!-- 🔥 FIREBASE -->
 <script type="module">
 
-// 🔥 IMPORTS FIREBASE
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// 🔥 TU CONFIG
 const firebaseConfig = {
   apiKey: "AIzaSyClTMXXUlDDK0txPwr1Q5SFYkytC9RQvGA",
   authDomain: "calculadora-3d-876b3.firebaseapp.com",
@@ -15,10 +230,204 @@ const firebaseConfig = {
   measurementId: "G-YVNM47CMSK"
 };
 
-// 🔥 INIT
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-window.db = db; // 👈 importante para usar fuera
+window.db = db;
+window.collection = collection;
+window.addDoc = addDoc;
+window.getDocs = getDocs;
+window.deleteDoc = deleteDoc;
+window.doc = doc;
 
 </script>
+
+<script>
+
+let config = {costoKg:20,extraFil:20,extraTime:10,costoHora:0.23,costoEnergia:0.20};
+let ultima = {};
+let filtroActual="all";
+
+// CALCULAR
+function calcular(){
+let f=+fil.value||0
+let h1=+h.value||0
+let m1=+m.value||0
+
+let filExtra=f*(1+config.extraFil/100)
+let costoFil=(filExtra/1000)*config.costoKg
+
+let tiempo=(h1+m1/60)*(1+config.extraTime/100)
+let costoTiempo=tiempo*(config.costoHora+config.costoEnergia)
+
+let total=(costoFil+costoTiempo)*1.6
+
+document.getElementById("total").innerText=total.toFixed(2)
+
+ultima={f,h:h1,m:m1,total:total.toFixed(2)}
+
+btnCot.style.display="block"
+}
+
+function irCot(){
+mostrar("quotes", document.querySelectorAll(".tab")[1])
+}
+
+// GUARDAR COT (FIREBASE)
+async function guardarCot(){
+let file=foto.files[0]
+let reader=new FileReader()
+
+if(file){
+reader.onload=()=>saveCot(reader.result)
+reader.readAsDataURL(file)
+}else saveCot(null)
+}
+
+async function saveCot(img){
+await addDoc(collection(db,"cotizaciones"),{
+...ultima,
+desc:desc.value,
+link:link.value,
+obs:obs.value,
+img:img,
+fecha:new Date().toLocaleString()
+})
+
+desc.value="";link.value="";obs.value="";foto.value=""
+cargarCot()
+}
+
+// CARGAR COT (FIREBASE)
+async function cargarCot(){
+let snapshot=await getDocs(collection(db,"cotizaciones"))
+let html=""
+
+snapshot.forEach((docu)=>{
+let c=docu.data()
+
+html+=`
+<div class="card line">
+<div onclick="verCot('${docu.id}')">${c.desc||"Sin nombre"} - $${c.total}</div>
+<div>
+<button onclick="crearVenta('${docu.id}')">💰</button>
+<button onclick="eliminarCot('${docu.id}')">🗑</button>
+</div>
+</div>`
+})
+
+listaCot.innerHTML=html
+}
+
+// VER DETALLE
+async function verCot(id){
+let snapshot=await getDocs(collection(db,"cotizaciones"))
+
+snapshot.forEach((docu)=>{
+if(docu.id===id){
+let c=docu.data()
+
+detalle.innerHTML=`
+<div class="card">
+<b>${c.desc}</b><br>
+💰 $${c.total}<br>
+⚖️ ${c.f}gr<br>
+⏱ ${c.h}h ${c.m}m<br>
+📅 ${c.fecha}<br>
+${c.link?`🔗 <a href="${c.link}" target="_blank">Enlace</a><br>`:""}
+${c.obs?`📝 ${c.obs}<br>`:""}
+${c.img?`<img src="${c.img}">`:""}
+</div>`
+}
+})
+}
+
+// ELIMINAR
+async function eliminarCot(id){
+if(confirm("Eliminar?")){
+await deleteDoc(doc(db,"cotizaciones",id))
+cargarCot()
+}
+}
+
+// VENTAS (LOCAL AÚN)
+function guardarVenta(){
+if(!cliente.value||!precio.value){alert("Faltan datos");return}
+
+let ventas=JSON.parse(localStorage.getItem("ventas")||"[]")
+
+ventas.unshift({
+cliente:cliente.value,
+precio:+precio.value,
+figura:figura.value,
+pagado:pagado.checked,
+fecha:new Date().toLocaleString()
+})
+
+localStorage.setItem("ventas",JSON.stringify(ventas))
+cliente.value="";precio.value="";figura.value="";pagado.checked=false
+cargarVentas()
+}
+
+function filtroVenta(f){filtroActual=f;cargarVentas()}
+
+function cargarVentas(){
+let ventas=JSON.parse(localStorage.getItem("ventas")||"[]")
+let html="",pag=0,pend=0
+
+ventas.forEach((v,i)=>{
+if(filtroActual=="pagado"&&!v.pagado)return
+if(filtroActual=="pendiente"&&v.pagado)return
+
+if(v.pagado)pag+=v.precio;else pend+=v.precio
+
+html+=`
+<div class="card line">
+<div>
+<b>${v.cliente}</b> - $${v.precio}<br>
+${v.figura}<br>
+<input type="checkbox" ${v.pagado?"checked":""} onchange="togglePago(${i})"> Pagado
+</div>
+<button onclick="eliminarVenta(${i})">🗑</button>
+</div>`
+})
+
+listaVentas.innerHTML=html
+tPagado.innerText=pag.toFixed(2)
+tPend.innerText=pend.toFixed(2)
+tTotal.innerText=(pag+pend).toFixed(2)
+}
+
+function togglePago(i){
+let ventas=JSON.parse(localStorage.getItem("ventas"))
+ventas[i].pagado=!ventas[i].pagado
+localStorage.setItem("ventas",JSON.stringify(ventas))
+cargarVentas()
+}
+
+function eliminarVenta(i){
+let ventas=JSON.parse(localStorage.getItem("ventas"))
+ventas.splice(i,1)
+localStorage.setItem("ventas",JSON.stringify(ventas))
+cargarVentas()
+}
+
+function guardarConfig(){alert("Config guardada")}
+
+function mostrar(tab,el){
+calc.style.display=tab=="calc"?"block":"none"
+quotes.style.display=tab=="quotes"?"block":"none"
+sales.style.display=tab=="sales"?"block":"none"
+config.style.display=tab=="config"?"block":"none"
+
+document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"))
+el.classList.add("active")
+
+if(tab=="quotes")cargarCot()
+if(tab=="sales")cargarVentas()
+}
+
+</script>
+
+</body>
+</html>
