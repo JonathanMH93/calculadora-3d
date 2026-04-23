@@ -4,19 +4,81 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>3D App</title>
+<title>3D App PRO</title>
 
 <style>
-body{font-family:Arial;background:#0f172a;color:white;margin:0}
-.container{max-width:420px;margin:auto;padding:10px}
-.tabs{display:flex}
-.tab{flex:1;padding:10px;text-align:center;background:#334155;cursor:pointer}
-.active{background:#2563eb}
-.card{background:#1e293b;padding:10px;margin:5px 0;border-radius:10px}
-input,textarea{width:100%;padding:6px;margin:4px 0;background:#334155;color:white;border:none;border-radius:6px}
-button{padding:6px;margin:2px;background:#2563eb;color:white;border:none;border-radius:6px}
-.line{display:flex;justify-content:space-between;align-items:center}
-.total{color:#22c55e;font-size:18px}
+body {
+  font-family: Arial;
+  background:#0f172a;
+  color:white;
+  margin:0;
+}
+
+.container {
+  max-width:420px;
+  margin:auto;
+  padding:15px;
+}
+
+.tabs {
+  display:flex;
+  margin-bottom:10px;
+}
+
+.tab {
+  flex:1;
+  padding:12px;
+  text-align:center;
+  background:#334155;
+  cursor:pointer;
+  font-size:14px;
+}
+
+.active {
+  background:#2563eb;
+}
+
+.card {
+  background:#1e293b;
+  padding:15px;
+  margin-bottom:10px;
+  border-radius:12px;
+}
+
+input, textarea {
+  width:100%;
+  padding:12px;
+  margin:6px 0;
+  border-radius:8px;
+  border:none;
+  background:#334155;
+  color:white;
+  font-size:16px;
+}
+
+button {
+  width:100%;
+  padding:12px;
+  margin-top:8px;
+  border:none;
+  border-radius:10px;
+  background:#2563eb;
+  color:white;
+  font-size:16px;
+}
+
+.total {
+  font-size:26px;
+  text-align:center;
+  color:#22c55e;
+}
+
+.line {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:5px;
+}
 </style>
 </head>
 
@@ -25,30 +87,50 @@ button{padding:6px;margin:2px;background:#2563eb;color:white;border:none;border-
 <div class="container">
 
 <div class="tabs">
-<div class="tab active" onclick="tab('calc',this)">💰</div>
-<div class="tab" onclick="tab('quotes',this)">📦</div>
-<div class="tab" onclick="tab('sales',this)">💵</div>
+  <div class="tab active" onclick="mostrar('calc',this)">💰 Calcular</div>
+  <div class="tab" onclick="mostrar('quotes',this)">📦 Cotizaciones</div>
+  <div class="tab" onclick="mostrar('sales',this)">💵 Ventas</div>
+  <div class="tab" onclick="mostrar('config',this)">⚙️ Config</div>
 </div>
 
 <!-- CALC -->
 <div id="calc">
-<input id="fil" placeholder="Filamento (gr)">
-<input id="h" placeholder="Horas">
-<input id="m" placeholder="Minutos">
-<button onclick="calc()">Calcular</button>
-<div class="total">$ <span id="tot">0</span></div>
-<button id="btnCot" style="display:none" onclick="tab('quotes',tabs[1])">Cotizar</button>
+
+<div class="card">
+<label>Filamento (gr)</label>
+<input id="fil">
+
+<label>Horas</label>
+<input id="h">
+
+<label>Minutos</label>
+<input id="m">
 </div>
 
-<!-- QUOTES -->
+<button onclick="calcular()">Calcular</button>
+
+<div class="card total">
+$ <span id="total">0</span>
+</div>
+
+<button id="btnCotizar" style="display:none" onclick="abrirCotizar()">📌 Cotizar</button>
+
+</div>
+
+<!-- COTIZACIONES -->
 <div id="quotes" style="display:none">
+
+<div class="card">
 <textarea id="desc" placeholder="Descripción"></textarea>
-<button onclick="guardarCot()">Guardar cotización</button>
+<button onclick="guardarCotizacion()">Guardar cotización</button>
+</div>
+
 <div id="listaCot"></div>
 <div id="detalle"></div>
+
 </div>
 
-<!-- SALES -->
+<!-- VENTAS -->
 <div id="sales" style="display:none">
 
 <div class="card">
@@ -62,9 +144,20 @@ button{padding:6px;margin:2px;background:#2563eb;color:white;border:none;border-
 <div id="listaVentas"></div>
 
 <div class="card">
-<div>💵 Pagado: $ <span id="tPagado">0</span></div>
-<div>🧾 Pendiente: $ <span id="tPend">0</span></div>
+💵 Pagado: $ <span id="tPagado">0</span><br>
+🧾 Pendiente: $ <span id="tPend">0</span><br>
 <div class="total">📊 Total: $ <span id="tTotal">0</span></div>
+</div>
+
+</div>
+
+<!-- CONFIG -->
+<div id="config" style="display:none">
+
+<div class="card">
+<label>% Ganancia</label>
+<input id="ganancia" value="60">
+<button onclick="guardarConfig()">Guardar configuración</button>
 </div>
 
 </div>
@@ -73,169 +166,198 @@ button{padding:6px;margin:2px;background:#2563eb;color:white;border:none;border-
 
 <script>
 
-let ultima={}
+let ultima = {};
+let config = {ganancia:60};
 
-// CALC
-function calc(){
-let f=+fil.value||0
-let h1=+h.value||0
-let m1=+m.value||0
+// CALCULAR
+function calcular(){
+  let f = parseFloat(document.getElementById("fil").value)||0;
+  let h = parseFloat(document.getElementById("h").value)||0;
+  let m = parseFloat(document.getElementById("m").value)||0;
 
-let total=(f*0.02+(h1+m1/60)*0.5)*1.6
+  let total = (f*0.02 + (h + m/60)*0.5) * (1 + config.ganancia/100);
 
-tot.innerText=total.toFixed(2)
-ultima={f,h:h1,m:m1,total:total.toFixed(2)}
+  document.getElementById("total").innerText = total.toFixed(2);
 
-btnCot.style.display="block"
+  ultima = {f,h,m,total:total.toFixed(2)};
+
+  document.getElementById("btnCotizar").style.display = "block";
+}
+
+// IR A COTIZAR
+function abrirCotizar(){
+  let tabs = document.querySelectorAll(".tab");
+  mostrar("quotes", tabs[1]);
 }
 
 // GUARDAR COT
-function guardarCot(){
-let lista=JSON.parse(localStorage.getItem("cot")||"[]")
+function guardarCotizacion(){
 
-lista.unshift({...ultima,desc:desc.value,fecha:new Date().toLocaleString()})
+  let lista = JSON.parse(localStorage.getItem("cot")||"[]");
 
-localStorage.setItem("cot",JSON.stringify(lista))
+  lista.unshift({
+    ...ultima,
+    desc: document.getElementById("desc").value,
+    fecha: new Date().toLocaleString()
+  });
 
-desc.value=""
-cargarCot()
+  localStorage.setItem("cot", JSON.stringify(lista));
+
+  document.getElementById("desc").value = "";
+
+  cargarCot();
 }
 
 // LISTA COT
 function cargarCot(){
-let lista=JSON.parse(localStorage.getItem("cot")||"[]")
-let html=""
+  let lista = JSON.parse(localStorage.getItem("cot")||"[]");
 
-lista.forEach((c,i)=>{
-html+=`
-<div class="card line">
-<div onclick="verCot(${i})">${c.desc||"Sin nombre"} - $${c.total}</div>
-<div>
-<button onclick="crearVenta(${i})">💰</button>
-<button onclick="delCot(${i})">🗑</button>
-</div>
-</div>`
-})
+  let html = "";
 
-listaCot.innerHTML=html
+  lista.forEach((c,i)=>{
+    html += `
+    <div class="card line">
+      <div onclick="verCot(${i})">${c.desc||"Sin nombre"} - $${c.total}</div>
+      <div>
+        <button onclick="crearVenta(${i})">💰</button>
+        <button onclick="eliminarCot(${i})">🗑</button>
+      </div>
+    </div>`;
+  });
+
+  document.getElementById("listaCot").innerHTML = html;
 }
 
-// DETALLE
+// VER DETALLE
 function verCot(i){
-let c=JSON.parse(localStorage.getItem("cot"))[i]
+  let c = JSON.parse(localStorage.getItem("cot"))[i];
 
-detalle.innerHTML=`
-<div class="card">
-<b>${c.desc}</b><br>
-💰 $${c.total}<br>
-⚖️ ${c.f}gr<br>
-⏱ ${c.h}h ${c.m}m<br>
-📅 ${c.fecha}
-</div>`
+  document.getElementById("detalle").innerHTML = `
+  <div class="card">
+    <b>${c.desc}</b><br>
+    💰 $${c.total}<br>
+    ⚖️ ${c.f}gr<br>
+    ⏱ ${c.h}h ${c.m}m<br>
+    📅 ${c.fecha}
+  </div>`;
 }
 
 // ELIMINAR
-function delCot(i){
-if(confirm("Eliminar?")){
-let lista=JSON.parse(localStorage.getItem("cot"))
-lista.splice(i,1)
-localStorage.setItem("cot",JSON.stringify(lista))
-cargarCot()
-}
+function eliminarCot(i){
+  if(confirm("Eliminar cotización?")){
+    let lista = JSON.parse(localStorage.getItem("cot"));
+    lista.splice(i,1);
+    localStorage.setItem("cot", JSON.stringify(lista));
+    cargarCot();
+  }
 }
 
 // CREAR VENTA
 function crearVenta(i){
-let c=JSON.parse(localStorage.getItem("cot"))[i]
-tab('sales',tabs[2])
+  let c = JSON.parse(localStorage.getItem("cot"))[i];
+  let tabs = document.querySelectorAll(".tab");
 
-precio.value=c.total
-figura.value=c.desc
+  mostrar("sales", tabs[2]);
+
+  document.getElementById("precio").value = c.total;
+  document.getElementById("figura").value = c.desc;
 }
 
 // GUARDAR VENTA
 function guardarVenta(){
 
-if(!cliente.value){
-alert("Cliente requerido")
-return
-}
+  let cliente = document.getElementById("cliente").value;
+  let precio = document.getElementById("precio").value;
 
-if(!precio.value){
-alert("Precio requerido")
-return
-}
+  if(!cliente){
+    alert("Cliente requerido");
+    return;
+  }
 
-let ventas=JSON.parse(localStorage.getItem("ventas")||"[]")
+  if(!precio){
+    alert("Precio requerido");
+    return;
+  }
 
-ventas.unshift({
-cliente:cliente.value,
-precio:+precio.value,
-figura:figura.value,
-pagado:pagado.checked,
-fecha:new Date().toLocaleString()
-})
+  let ventas = JSON.parse(localStorage.getItem("ventas")||"[]");
 
-localStorage.setItem("ventas",JSON.stringify(ventas))
+  ventas.unshift({
+    cliente,
+    precio: parseFloat(precio),
+    figura: document.getElementById("figura").value,
+    pagado: document.getElementById("pagado").checked,
+    fecha: new Date().toLocaleString()
+  });
 
-cliente.value=""
-precio.value=""
-figura.value=""
-pagado.checked=false
+  localStorage.setItem("ventas", JSON.stringify(ventas));
 
-cargarVentas()
+  document.getElementById("cliente").value="";
+  document.getElementById("precio").value="";
+  document.getElementById("figura").value="";
+  document.getElementById("pagado").checked=false;
+
+  cargarVentas();
 }
 
 // LISTA VENTAS
 function cargarVentas(){
-let ventas=JSON.parse(localStorage.getItem("ventas")||"[]")
 
-let html=""
-let pag=0, pend=0
+  let ventas = JSON.parse(localStorage.getItem("ventas")||"[]");
 
-ventas.forEach((v,i)=>{
+  let html = "";
+  let pag=0, pend=0;
 
-if(v.pagado) pag+=v.precio
-else pend+=v.precio
+  ventas.forEach((v,i)=>{
 
-html+=`
-<div class="card line">
-<div>
-<b>${v.cliente}</b> - $${v.precio}<br>
-${v.figura}<br>
-${v.pagado?"✔ Pagado":"❌ Pendiente"}
-</div>
-<button onclick="delVenta(${i})">🗑</button>
-</div>`
-})
+    if(v.pagado) pag += v.precio;
+    else pend += v.precio;
 
-listaVentas.innerHTML=html
-tPagado.innerText=pag.toFixed(2)
-tPend.innerText=pend.toFixed(2)
-tTotal.innerText=(pag+pend).toFixed(2)
+    html += `
+    <div class="card line">
+      <div>
+        <b>${v.cliente}</b> - $${v.precio}<br>
+        ${v.figura}<br>
+        ${v.pagado?"✔ Pagado":"❌ Pendiente"}
+      </div>
+      <button onclick="eliminarVenta(${i})">🗑</button>
+    </div>`;
+  });
+
+  document.getElementById("listaVentas").innerHTML = html;
+  document.getElementById("tPagado").innerText = pag.toFixed(2);
+  document.getElementById("tPend").innerText = pend.toFixed(2);
+  document.getElementById("tTotal").innerText = (pag+pend).toFixed(2);
 }
 
 // ELIMINAR VENTA
-function delVenta(i){
-if(confirm("Eliminar venta?")){
-let ventas=JSON.parse(localStorage.getItem("ventas"))
-ventas.splice(i,1)
-localStorage.setItem("ventas",JSON.stringify(ventas))
-cargarVentas()
+function eliminarVenta(i){
+  if(confirm("Eliminar venta?")){
+    let ventas = JSON.parse(localStorage.getItem("ventas"));
+    ventas.splice(i,1);
+    localStorage.setItem("ventas", JSON.stringify(ventas));
+    cargarVentas();
+  }
 }
+
+// CONFIG
+function guardarConfig(){
+  config.ganancia = parseFloat(document.getElementById("ganancia").value)||0;
+  alert("Guardado");
 }
 
 // TABS
-function tab(t,el){
-calc.style.display=t=='calc'?'block':'none'
-quotes.style.display=t=='quotes'?'block':'none'
-sales.style.display=t=='sales'?'block':'none'
+function mostrar(tab, el){
 
-document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'))
-el.classList.add('active')
+  document.getElementById("calc").style.display = tab=="calc"?"block":"none";
+  document.getElementById("quotes").style.display = tab=="quotes"?"block":"none";
+  document.getElementById("sales").style.display = tab=="sales"?"block":"none";
+  document.getElementById("config").style.display = tab=="config"?"block":"none";
 
-if(t=='quotes') cargarCot()
-if(t=='sales') cargarVentas()
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  el.classList.add("active");
+
+  if(tab=="quotes") cargarCot();
+  if(tab=="sales") cargarVentas();
 }
 
 </script>
