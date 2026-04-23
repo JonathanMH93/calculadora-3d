@@ -7,7 +7,6 @@
 <title>3D App PRO</title>
 
 <style>
-
 * { box-sizing: border-box; }
 
 body {
@@ -90,7 +89,6 @@ img {
   max-width:120px;
   border-radius:8px;
 }
-
 </style>
 </head>
 
@@ -110,24 +108,20 @@ img {
 <div class="card">
 <label>Filamento (gr)</label>
 <input id="fil">
-
 <label>Horas</label>
 <input id="h">
-
 <label>Minutos</label>
 <input id="m">
 </div>
 
 <button onclick="calcular()">Calcular</button>
 
-<div class="card total">
-$ <span id="total">0</span>
-</div>
+<div class="card total">$ <span id="total">0</span></div>
 
 <button id="btnCot" style="display:none" onclick="irCot()">📌 Cotizar</button>
 </div>
 
-<!-- COTIZACIONES -->
+<!-- COT -->
 <div id="quotes" style="display:none">
 
 <div class="card">
@@ -165,8 +159,8 @@ $ <span id="total">0</span>
 <input id="figura">
 
 <div style="display:flex;align-items:center;gap:8px;margin-top:10px">
-  <input type="checkbox" id="pagado">
-  <span>Pagado</span>
+<input type="checkbox" id="pagado">
+<span>Pagado</span>
 </div>
 
 <button onclick="guardarVenta()">Guardar venta</button>
@@ -214,9 +208,8 @@ $ <span id="total">0</span>
 
 </div>
 
-<!-- 🔥 FIREBASE -->
+<!-- FIREBASE -->
 <script type="module">
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
@@ -226,8 +219,7 @@ const firebaseConfig = {
   projectId: "calculadora-3d-876b3",
   storageBucket: "calculadora-3d-876b3.firebasestorage.app",
   messagingSenderId: "223903231054",
-  appId: "1:223903231054:web:80bcf8b0d00c602b3ae71f",
-  measurementId: "G-YVNM47CMSK"
+  appId: "1:223903231054:web:80bcf8b0d00c602b3ae71f"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -239,19 +231,16 @@ window.addDoc = addDoc;
 window.getDocs = getDocs;
 window.deleteDoc = deleteDoc;
 window.doc = doc;
-
 </script>
 
 <script>
 
 let config = {costoKg:20,extraFil:20,extraTime:10,costoHora:0.23,costoEnergia:0.20};
-
 let ultima = {};
 let cotizacionesCache = [];
 let ventasCache = [];
 let filtroActual="all";
 
-// ================= CALC =================
 function calcular(){
 let f=+fil.value||0
 let h1=+h.value||0
@@ -259,17 +248,14 @@ let m1=+m.value||0
 
 let filExtra=f*(1+config.extraFil/100)
 let costoFil=(filExtra/1000)*config.costoKg
-
 let tiempo=(h1+m1/60)*(1+config.extraTime/100)
 let costoTiempo=tiempo*(config.costoHora+config.costoEnergia)
-
 let total=(costoFil+costoTiempo)*1.6
 
 totalSpan=document.getElementById("total")
 totalSpan.innerText=total.toFixed(2)
 
 ultima={f,h:h1,m:m1,total:total.toFixed(2)}
-
 btnCot.style.display="block"
 }
 
@@ -277,12 +263,10 @@ function irCot(){
 mostrar("quotes", document.querySelectorAll(".tab")[1])
 }
 
-// ================= COTIZACIONES =================
-
+// COTIZACIONES
 async function guardarCot(){
 let file=foto.files[0]
 let reader=new FileReader()
-
 if(file){
 reader.onload=()=>saveCot(reader.result)
 reader.readAsDataURL(file)
@@ -290,7 +274,6 @@ reader.readAsDataURL(file)
 }
 
 async function saveCot(img){
-
 await addDoc(collection(db,"cotizaciones"),{
 ...ultima,
 desc:desc.value,
@@ -301,21 +284,16 @@ fecha:new Date().toLocaleString()
 })
 
 desc.value="";link.value="";obs.value="";foto.value=""
-
 cargarCot()
 }
 
 async function cargarCot(){
-
 let snapshot=await getDocs(collection(db,"cotizaciones"))
-
 cotizacionesCache=[]
-
 let html=""
 
-snapshot.forEach((docu)=>{
+snapshot.forEach(docu=>{
 let c=docu.data()
-
 let obj={id:docu.id,...c}
 cotizacionesCache.push(obj)
 
@@ -333,9 +311,7 @@ listaCot.innerHTML=html
 }
 
 function verCot(id){
-
 let c=cotizacionesCache.find(x=>x.id==id)
-
 if(!c)return
 
 detalle.innerHTML=`
@@ -360,8 +336,7 @@ cargarCot()
 
 function crearVenta(id){
 let c=cotizacionesCache.find(x=>x.id==id)
-
-if(!c)return
+if(!c){alert("Error cotización");return}
 
 mostrar("sales", document.querySelectorAll(".tab")[2])
 
@@ -369,24 +344,34 @@ precio.value=c.total
 figura.value=c.desc
 }
 
-// ================= VENTAS =================
-
+// VENTAS
 async function guardarVenta(){
 
-if(!cliente.value){alert("Cliente requerido");return}
-if(!precio.value){alert("Precio requerido");return}
+let clienteVal=cliente.value
+let precioVal=precio.value
 
+if(!clienteVal){alert("Cliente requerido");return}
+if(!precioVal){alert("Precio requerido");return}
+
+try{
 await addDoc(collection(db,"ventas"),{
-cliente:cliente.value,
-precio:+precio.value,
+cliente:clienteVal,
+precio:+precioVal,
 figura:figura.value,
 pagado:pagado.checked,
 fecha:new Date().toLocaleString()
 })
 
+alert("Venta guardada ✔")
+
 cliente.value="";precio.value="";figura.value="";pagado.checked=false
 
 cargarVentas()
+
+}catch(e){
+console.error(e)
+alert("Error al guardar venta")
+}
 }
 
 function filtroVenta(f){
@@ -395,23 +380,20 @@ cargarVentas()
 }
 
 async function cargarVentas(){
-
 let snapshot=await getDocs(collection(db,"ventas"))
 
 ventasCache=[]
-
 let html=""
 let pag=0,pend=0
 
-snapshot.forEach((docu)=>{
-
+snapshot.forEach(docu=>{
 let v={id:docu.id,...docu.data()}
 ventasCache.push(v)
 
 if(filtroActual=="pagado"&&!v.pagado)return
 if(filtroActual=="pendiente"&&v.pagado)return
 
-if(v.pagado) pag+=v.precio
+if(v.pagado)pag+=v.precio
 else pend+=v.precio
 
 html+=`
@@ -432,7 +414,6 @@ tTotal.innerText=(pag+pend).toFixed(2)
 }
 
 async function togglePago(id){
-
 let v=ventasCache.find(x=>x.id==id)
 if(!v)return
 
@@ -451,10 +432,25 @@ cargarVentas()
 }
 }
 
-// ================= UI =================
+// CONFIG
+function cargarConfig(){
+costoKg.value=config.costoKg
+extraFil.value=config.extraFil
+extraTime.value=config.extraTime
+costoHora.value=config.costoHora
+costoEnergia.value=config.costoEnergia
+}
 
-function guardarConfig(){alert("Config guardada")}
+function guardarConfig(){
+config.costoKg=+costoKg.value||20
+config.extraFil=+extraFil.value||20
+config.extraTime=+extraTime.value||10
+config.costoHora=+costoHora.value||0.23
+config.costoEnergia=+costoEnergia.value||0.20
+alert("Config guardada")
+}
 
+// UI
 function mostrar(tab,el){
 
 calc.style.display=tab=="calc"?"block":"none"
@@ -467,6 +463,7 @@ el.classList.add("active")
 
 if(tab=="quotes") cargarCot()
 if(tab=="sales") cargarVentas()
+if(tab=="config") cargarConfig()
 }
 
 </script>
