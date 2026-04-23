@@ -7,28 +7,97 @@
 <title>3D App PRO</title>
 
 <style>
-body {font-family:Arial;background:#0f172a;color:white;margin:0}
-.container{max-width:900px;margin:auto;padding:20px}
 
-.tabs{display:flex;gap:5px;margin-bottom:15px}
-.tab{flex:1;padding:12px;background:#334155;cursor:pointer;text-align:center;border-radius:8px}
-.active{background:#2563eb}
-
-.card{background:#1e293b;padding:15px;margin-bottom:10px;border-radius:12px}
-
-input,textarea{
-width:100%;padding:12px;margin:6px 0;
-background:#334155;color:white;border:none;border-radius:8px
+* {
+  box-sizing: border-box;
 }
 
-button{
-padding:10px;margin:3px;background:#2563eb;
-color:white;border:none;border-radius:8px;cursor:pointer
+body {
+  font-family: Arial;
+  background:#0f172a;
+  color:white;
+  margin:0;
 }
 
-.line{display:flex;justify-content:space-between;align-items:center}
-.total{font-size:22px;color:#22c55e}
-img{max-width:120px;border-radius:8px}
+.container {
+  max-width:1000px;
+  margin:auto;
+  padding:20px;
+}
+
+.tabs {
+  display:flex;
+  gap:5px;
+  margin-bottom:15px;
+}
+
+.tab {
+  flex:1;
+  padding:12px;
+  background:#334155;
+  cursor:pointer;
+  text-align:center;
+  border-radius:8px;
+}
+
+.active {
+  background:#2563eb;
+}
+
+.card {
+  background:#1e293b;
+  padding:15px;
+  margin-bottom:10px;
+  border-radius:12px;
+  width:100%;
+  overflow:hidden;
+}
+
+input, textarea {
+  width:100%;
+  padding:12px;
+  margin:6px 0;
+  background:#334155;
+  color:white;
+  border:none;
+  border-radius:8px;
+}
+
+label {
+  font-size:13px;
+  color:#94a3b8;
+  display:block;
+  margin-top:8px;
+}
+
+button {
+  padding:10px;
+  margin:3px;
+  background:#2563eb;
+  color:white;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+}
+
+.line {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+}
+
+.total {
+  font-size:22px;
+  color:#22c55e;
+}
+
+img {
+  max-width:120px;
+  border-radius:8px;
+  margin-top:5px;
+}
+
 </style>
 </head>
 
@@ -37,35 +106,52 @@ img{max-width:120px;border-radius:8px}
 <div class="container">
 
 <div class="tabs">
-<div class="tab active" onclick="mostrar('calc',this)">💰 Calcular</div>
-<div class="tab" onclick="mostrar('quotes',this)">📦 Cotizaciones</div>
-<div class="tab" onclick="mostrar('sales',this)">💵 Ventas</div>
-<div class="tab" onclick="mostrar('config',this)">⚙️ Config</div>
+  <div class="tab active" onclick="mostrar('calc',this)">💰 Calcular</div>
+  <div class="tab" onclick="mostrar('quotes',this)">📦 Cotizaciones</div>
+  <div class="tab" onclick="mostrar('sales',this)">💵 Ventas</div>
+  <div class="tab" onclick="mostrar('config',this)">⚙️ Config</div>
 </div>
 
 <!-- CALC -->
 <div id="calc">
+
 <div class="card">
-<input id="fil" placeholder="Filamento (gr)">
-<input id="h" placeholder="Horas">
-<input id="m" placeholder="Minutos">
+<label>Filamento (gr)</label>
+<input id="fil">
+
+<label>Horas</label>
+<input id="h">
+
+<label>Minutos</label>
+<input id="m">
 </div>
 
 <button onclick="calcular()">Calcular</button>
 
-<div class="card total">$ <span id="total">0</span></div>
+<div class="card total">
+$ <span id="total">0</span>
+</div>
 
 <button id="btnCot" style="display:none" onclick="irCot()">📌 Cotizar</button>
+
 </div>
 
 <!-- COTIZACIONES -->
 <div id="quotes" style="display:none">
 
 <div class="card">
-<textarea id="desc" placeholder="Descripción"></textarea>
-<input id="link" placeholder="Enlace (opcional)">
+<label>Descripción</label>
+<textarea id="desc"></textarea>
+
+<label>Enlace</label>
+<input id="link">
+
+<label>Foto</label>
 <input type="file" id="foto">
-<textarea id="obs" placeholder="Observaciones"></textarea>
+
+<label>Observaciones</label>
+<textarea id="obs"></textarea>
+
 <button onclick="guardarCot()">Guardar cotización</button>
 </div>
 
@@ -78,10 +164,20 @@ img{max-width:120px;border-radius:8px}
 <div id="sales" style="display:none">
 
 <div class="card">
-<input id="cliente" placeholder="Cliente">
-<input id="precio" placeholder="Precio">
-<input id="figura" placeholder="Figura">
-<label><input type="checkbox" id="pagado"> Pagado</label>
+<label>Cliente</label>
+<input id="cliente">
+
+<label>Precio</label>
+<input id="precio">
+
+<label>Figura</label>
+<input id="figura">
+
+<div style="display:flex;align-items:center;gap:8px;margin-top:10px">
+  <input type="checkbox" id="pagado">
+  <span>Pagado</span>
+</div>
+
 <button onclick="guardarVenta()">Guardar venta</button>
 </div>
 
@@ -105,12 +201,24 @@ img{max-width:120px;border-radius:8px}
 <div id="config" style="display:none">
 
 <div class="card">
-<input id="costoKg" placeholder="Costo kg filamento">
-<input id="extraFil" placeholder="% extra filamento">
-<input id="extraTime" placeholder="% extra tiempo">
-<input id="costoHora" placeholder="Costo máquina por hora">
-<input id="costoEnergia" placeholder="Costo kWh">
-<button onclick="guardarConfig()">Guardar</button>
+
+<label>Costo kg filamento</label>
+<input id="costoKg">
+
+<label>% extra filamento</label>
+<input id="extraFil">
+
+<label>% extra tiempo</label>
+<input id="extraTime">
+
+<label>Costo máquina por hora</label>
+<input id="costoHora">
+
+<label>Costo energía (kWh)</label>
+<input id="costoEnergia">
+
+<button onclick="guardarConfig()">Guardar configuración</button>
+
 </div>
 
 </div>
@@ -119,233 +227,245 @@ img{max-width:120px;border-radius:8px}
 
 <script>
 
-let config={
-costoKg:20,
-extraFil:20,
-extraTime:10,
-costoHora:0.23,
-costoEnergia:0.20
-}
+let config = {
+  costoKg:20,
+  extraFil:20,
+  extraTime:10,
+  costoHora:0.23,
+  costoEnergia:0.20
+};
 
-let ultima={}
-let filtroActual="all"
+let ultima = {};
+let filtroActual="all";
 
 // CALCULAR
 function calcular(){
-let f=+fil.value||0
-let h1=+h.value||0
-let m1=+m.value||0
+  let f = +document.getElementById("fil").value || 0;
+  let h = +document.getElementById("h").value || 0;
+  let m = +document.getElementById("m").value || 0;
 
-let filExtra=f*(1+config.extraFil/100)
-let costoFil=(filExtra/1000)*config.costoKg
+  let filExtra = f * (1 + config.extraFil/100);
+  let costoFil = (filExtra/1000) * config.costoKg;
 
-let tiempo=(h1+m1/60)*(1+config.extraTime/100)
-let costoTiempo=tiempo*(config.costoHora+config.costoEnergia)
+  let tiempo = (h + m/60) * (1 + config.extraTime/100);
+  let costoTiempo = tiempo * (config.costoHora + config.costoEnergia);
 
-let total=(costoFil+costoTiempo)*1.6
+  let total = (costoFil + costoTiempo) * 1.6;
 
-totalSpan=document.getElementById("total")
-totalSpan.innerText=total.toFixed(2)
+  document.getElementById("total").innerText = total.toFixed(2);
 
-ultima={f,h:h1,m:m1,total:total.toFixed(2)}
+  ultima = {f,h,m,total:total.toFixed(2)};
 
-btnCot.style.display="block"
+  document.getElementById("btnCot").style.display = "block";
 }
 
-// IR COT
+// IR A COT
 function irCot(){
-let tabs=document.querySelectorAll(".tab")
-mostrar("quotes",tabs[1])
+  let tabs = document.querySelectorAll(".tab");
+  mostrar("quotes", tabs[1]);
 }
 
 // GUARDAR COT
 function guardarCot(){
-let file=foto.files[0]
-let reader=new FileReader()
+  let file = document.getElementById("foto").files[0];
+  let reader = new FileReader();
 
-if(file){
-reader.onload=()=>saveCot(reader.result)
-reader.readAsDataURL(file)
-}else saveCot(null)
+  if(file){
+    reader.onload = () => saveCot(reader.result);
+    reader.readAsDataURL(file);
+  } else {
+    saveCot(null);
+  }
 }
 
 function saveCot(img){
-let lista=JSON.parse(localStorage.getItem("cot")||"[]")
+  let lista = JSON.parse(localStorage.getItem("cot")||"[]");
 
-lista.unshift({
-...ultima,
-desc:desc.value,
-link:link.value,
-obs:obs.value,
-img:img,
-fecha:new Date().toLocaleString()
-})
+  lista.unshift({
+    ...ultima,
+    desc:document.getElementById("desc").value,
+    link:document.getElementById("link").value,
+    obs:document.getElementById("obs").value,
+    img:img,
+    fecha:new Date().toLocaleString()
+  });
 
-localStorage.setItem("cot",JSON.stringify(lista))
+  localStorage.setItem("cot", JSON.stringify(lista));
 
-desc.value="";link.value="";obs.value="";foto.value=""
-cargarCot()
+  document.getElementById("desc").value="";
+  document.getElementById("link").value="";
+  document.getElementById("obs").value="";
+  document.getElementById("foto").value="";
+
+  cargarCot();
 }
 
 // LISTA COT
 function cargarCot(){
-let lista=JSON.parse(localStorage.getItem("cot")||"[]")
-let html=""
+  let lista = JSON.parse(localStorage.getItem("cot")||"[]");
+  let html="";
 
-lista.forEach((c,i)=>{
-html+=`
-<div class="card line">
-<div onclick="verCot(${i})">${c.desc||"Sin nombre"} - $${c.total}</div>
-<div>
-<button onclick="crearVenta(${i})">💰</button>
-<button onclick="eliminarCot(${i})">🗑</button>
-</div>
-</div>`
-})
+  lista.forEach((c,i)=>{
+    html+=`
+    <div class="card line">
+      <div onclick="verCot(${i})">${c.desc||"Sin nombre"} - $${c.total}</div>
+      <div>
+        <button onclick="crearVenta(${i})">💰</button>
+        <button onclick="eliminarCot(${i})">🗑</button>
+      </div>
+    </div>`;
+  });
 
-listaCot.innerHTML=html
+  document.getElementById("listaCot").innerHTML=html;
 }
 
 // DETALLE
 function verCot(i){
-let c=JSON.parse(localStorage.getItem("cot"))[i]
+  let c = JSON.parse(localStorage.getItem("cot"))[i];
 
-detalle.innerHTML=`
-<div class="card">
-<b>${c.desc}</b><br>
-💰 $${c.total}<br>
-⚖️ ${c.f}gr<br>
-⏱ ${c.h}h ${c.m}m<br>
-📅 ${c.fecha}<br>
-${c.link?`🔗 <a href="${c.link}" target="_blank">Enlace</a><br>`:""}
-${c.obs?`📝 ${c.obs}<br>`:""}
-${c.img?`<img src="${c.img}">`:""}
-</div>`
+  document.getElementById("detalle").innerHTML=`
+  <div class="card">
+    <b>${c.desc}</b><br>
+    💰 $${c.total}<br>
+    ⚖️ ${c.f}gr<br>
+    ⏱ ${c.h}h ${c.m}m<br>
+    📅 ${c.fecha}<br>
+    ${c.link?`🔗 <a href="${c.link}" target="_blank">Enlace</a><br>`:""}
+    ${c.obs?`📝 ${c.obs}<br>`:""}
+    ${c.img?`<img src="${c.img}">`:""}
+  </div>`;
 }
 
 // ELIMINAR
 function eliminarCot(i){
-if(confirm("Eliminar?")){
-let lista=JSON.parse(localStorage.getItem("cot"))
-lista.splice(i,1)
-localStorage.setItem("cot",JSON.stringify(lista))
-cargarCot()
-}
+  if(confirm("Eliminar?")){
+    let lista = JSON.parse(localStorage.getItem("cot"));
+    lista.splice(i,1);
+    localStorage.setItem("cot", JSON.stringify(lista));
+    cargarCot();
+  }
 }
 
 // CREAR VENTA
 function crearVenta(i){
-let c=JSON.parse(localStorage.getItem("cot"))[i]
-let tabs=document.querySelectorAll(".tab")
+  let c = JSON.parse(localStorage.getItem("cot"))[i];
+  let tabs = document.querySelectorAll(".tab");
 
-mostrar("sales",tabs[2])
+  mostrar("sales", tabs[2]);
 
-precio.value=c.total
-figura.value=c.desc
+  document.getElementById("precio").value = c.total;
+  document.getElementById("figura").value = c.desc;
 }
 
 // GUARDAR VENTA
 function guardarVenta(){
 
-if(!cliente.value){alert("Cliente requerido");return}
-if(!precio.value){alert("Precio requerido");return}
+  let cliente = document.getElementById("cliente").value;
+  let precio = document.getElementById("precio").value;
 
-let ventas=JSON.parse(localStorage.getItem("ventas")||"[]")
+  if(!cliente){alert("Cliente requerido");return;}
+  if(!precio){alert("Precio requerido");return;}
 
-ventas.unshift({
-cliente:cliente.value,
-precio:+precio.value,
-figura:figura.value,
-pagado:pagado.checked,
-fecha:new Date().toLocaleString()
-})
+  let ventas = JSON.parse(localStorage.getItem("ventas")||"[]");
 
-localStorage.setItem("ventas",JSON.stringify(ventas))
+  ventas.unshift({
+    cliente,
+    precio:+precio,
+    figura:document.getElementById("figura").value,
+    pagado:document.getElementById("pagado").checked,
+    fecha:new Date().toLocaleString()
+  });
 
-cliente.value="";precio.value="";figura.value="";pagado.checked=false
+  localStorage.setItem("ventas", JSON.stringify(ventas));
 
-cargarVentas()
+  document.getElementById("cliente").value="";
+  document.getElementById("precio").value="";
+  document.getElementById("figura").value="";
+  document.getElementById("pagado").checked=false;
+
+  cargarVentas();
 }
 
 // FILTRO
 function filtroVenta(f){
-filtroActual=f
-cargarVentas()
+  filtroActual=f;
+  cargarVentas();
 }
 
 // LISTA VENTAS
 function cargarVentas(){
-let ventas=JSON.parse(localStorage.getItem("ventas")||"[]")
 
-let html=""
-let pag=0,pend=0
+  let ventas = JSON.parse(localStorage.getItem("ventas")||"[]");
 
-ventas.forEach((v,i)=>{
+  let html="";
+  let pag=0, pend=0;
 
-if(filtroActual=="pagado" && !v.pagado) return
-if(filtroActual=="pendiente" && v.pagado) return
+  ventas.forEach((v,i)=>{
 
-if(v.pagado) pag+=v.precio
-else pend+=v.precio
+    if(filtroActual=="pagado" && !v.pagado) return;
+    if(filtroActual=="pendiente" && v.pagado) return;
 
-html+=`
-<div class="card line">
-<div>
-<b>${v.cliente}</b> - $${v.precio}<br>
-${v.figura}<br>
-<input type="checkbox" ${v.pagado?"checked":""} onchange="togglePago(${i})"> Pagado
-</div>
-<button onclick="eliminarVenta(${i})">🗑</button>
-</div>`
-})
+    if(v.pagado) pag+=v.precio;
+    else pend+=v.precio;
 
-listaVentas.innerHTML=html
-tPagado.innerText=pag.toFixed(2)
-tPend.innerText=pend.toFixed(2)
-tTotal.innerText=(pag+pend).toFixed(2)
+    html+=`
+    <div class="card line">
+      <div>
+        <b>${v.cliente}</b> - $${v.precio}<br>
+        ${v.figura}<br>
+        <input type="checkbox" ${v.pagado?"checked":""} onchange="togglePago(${i})"> Pagado
+      </div>
+      <button onclick="eliminarVenta(${i})">🗑</button>
+    </div>`;
+  });
+
+  document.getElementById("listaVentas").innerHTML=html;
+  document.getElementById("tPagado").innerText=pag.toFixed(2);
+  document.getElementById("tPend").innerText=pend.toFixed(2);
+  document.getElementById("tTotal").innerText=(pag+pend).toFixed(2);
 }
 
 // TOGGLE PAGO
 function togglePago(i){
-let ventas=JSON.parse(localStorage.getItem("ventas"))
-ventas[i].pagado=!ventas[i].pagado
-localStorage.setItem("ventas",JSON.stringify(ventas))
-cargarVentas()
+  let ventas = JSON.parse(localStorage.getItem("ventas"));
+  ventas[i].pagado = !ventas[i].pagado;
+  localStorage.setItem("ventas", JSON.stringify(ventas));
+  cargarVentas();
 }
 
 // ELIMINAR VENTA
 function eliminarVenta(i){
-if(confirm("Eliminar venta?")){
-let ventas=JSON.parse(localStorage.getItem("ventas"))
-ventas.splice(i,1)
-localStorage.setItem("ventas",JSON.stringify(ventas))
-cargarVentas()
-}
+  if(confirm("Eliminar venta?")){
+    let ventas = JSON.parse(localStorage.getItem("ventas"));
+    ventas.splice(i,1);
+    localStorage.setItem("ventas", JSON.stringify(ventas));
+    cargarVentas();
+  }
 }
 
 // CONFIG
 function guardarConfig(){
-config.costoKg=+costoKg.value||20
-config.extraFil=+extraFil.value||20
-config.extraTime=+extraTime.value||10
-config.costoHora=+costoHora.value||0.23
-config.costoEnergia=+costoEnergia.value||0.20
-alert("Guardado")
+  config.costoKg = +document.getElementById("costoKg").value || 20;
+  config.extraFil = +document.getElementById("extraFil").value || 20;
+  config.extraTime = +document.getElementById("extraTime").value || 10;
+  config.costoHora = +document.getElementById("costoHora").value || 0.23;
+  config.costoEnergia = +document.getElementById("costoEnergia").value || 0.20;
+  alert("Configuración guardada");
 }
 
 // TABS
 function mostrar(tab,el){
 
-document.getElementById("calc").style.display=tab=="calc"?"block":"none"
-document.getElementById("quotes").style.display=tab=="quotes"?"block":"none"
-document.getElementById("sales").style.display=tab=="sales"?"block":"none"
-document.getElementById("config").style.display=tab=="config"?"block":"none"
+  document.getElementById("calc").style.display = tab=="calc"?"block":"none";
+  document.getElementById("quotes").style.display = tab=="quotes"?"block":"none";
+  document.getElementById("sales").style.display = tab=="sales"?"block":"none";
+  document.getElementById("config").style.display = tab=="config"?"block":"none";
 
-document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"))
-el.classList.add("active")
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  el.classList.add("active");
 
-if(tab=="quotes") cargarCot()
-if(tab=="sales") cargarVentas()
+  if(tab=="quotes") cargarCot();
+  if(tab=="sales") cargarVentas();
 }
 
 </script>
