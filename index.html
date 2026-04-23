@@ -245,10 +245,13 @@ window.doc = doc;
 <script>
 
 let config = {costoKg:20,extraFil:20,extraTime:10,costoHora:0.23,costoEnergia:0.20};
+
 let ultima = {};
+let cotizacionesCache = [];
+let ventasCache = [];
 let filtroActual="all";
 
-// CALCULAR
+// ================= CALC =================
 function calcular(){
 let f=+fil.value||0
 let h1=+h.value||0
@@ -262,7 +265,8 @@ let costoTiempo=tiempo*(config.costoHora+config.costoEnergia)
 
 let total=(costoFil+costoTiempo)*1.6
 
-document.getElementById("total").innerText=total.toFixed(2)
+totalSpan=document.getElementById("total")
+totalSpan.innerText=total.toFixed(2)
 
 ultima={f,h:h1,m:m1,total:total.toFixed(2)}
 
@@ -273,7 +277,8 @@ function irCot(){
 mostrar("quotes", document.querySelectorAll(".tab")[1])
 }
 
-// GUARDAR COT (FIREBASE)
+// ================= COTIZACIONES =================
+
 async function guardarCot(){
 let file=foto.files[0]
 let reader=new FileReader()
@@ -285,6 +290,7 @@ reader.readAsDataURL(file)
 }
 
 async function saveCot(img){
+
 await addDoc(collection(db,"cotizaciones"),{
 ...ultima,
 desc:desc.value,
@@ -295,16 +301,23 @@ fecha:new Date().toLocaleString()
 })
 
 desc.value="";link.value="";obs.value="";foto.value=""
+
 cargarCot()
 }
 
-// CARGAR COT (FIREBASE)
 async function cargarCot(){
+
 let snapshot=await getDocs(collection(db,"cotizaciones"))
+
+cotizacionesCache=[]
+
 let html=""
 
 snapshot.forEach((docu)=>{
 let c=docu.data()
+
+let obj={id:docu.id,...c}
+cotizacionesCache.push(obj)
 
 html+=`
 <div class="card line">
@@ -319,13 +332,11 @@ html+=`
 listaCot.innerHTML=html
 }
 
-// VER DETALLE
-async function verCot(id){
-let snapshot=await getDocs(collection(db,"cotizaciones"))
+function verCot(id){
 
-snapshot.forEach((docu)=>{
-if(docu.id===id){
-let c=docu.data()
+let c=cotizacionesCache.find(x=>x.id==id)
+
+if(!c)return
 
 detalle.innerHTML=`
 <div class="card">
@@ -339,10 +350,7 @@ ${c.obs?`📝 ${c.obs}<br>`:""}
 ${c.img?`<img src="${c.img}">`:""}
 </div>`
 }
-})
-}
 
-// ELIMINAR
 async function eliminarCot(id){
 if(confirm("Eliminar?")){
 await deleteDoc(doc(db,"cotizaciones",id))
@@ -350,13 +358,25 @@ cargarCot()
 }
 }
 
-// VENTAS (LOCAL AÚN)
-function guardarVenta(){
-if(!cliente.value||!precio.value){alert("Faltan datos");return}
+function crearVenta(id){
+let c=cotizacionesCache.find(x=>x.id==id)
 
-let ventas=JSON.parse(localStorage.getItem("ventas")||"[]")
+if(!c)return
 
-ventas.unshift({
+mostrar("sales", document.querySelectorAll(".tab")[2])
+
+precio.value=c.total
+figura.value=c.desc
+}
+
+// ================= VENTAS =================
+
+async function guardarVenta(){
+
+if(!cliente.value){alert("Cliente requerido");return}
+if(!precio.value){alert("Precio requerido");return}
+
+await addDoc(collection(db,"ventas"),{
 cliente:cliente.value,
 precio:+precio.value,
 figura:figura.value,
@@ -364,31 +384,44 @@ pagado:pagado.checked,
 fecha:new Date().toLocaleString()
 })
 
-localStorage.setItem("ventas",JSON.stringify(ventas))
 cliente.value="";precio.value="";figura.value="";pagado.checked=false
+
 cargarVentas()
 }
 
-function filtroVenta(f){filtroActual=f;cargarVentas()}
+function filtroVenta(f){
+filtroActual=f
+cargarVentas()
+}
 
-function cargarVentas(){
-let ventas=JSON.parse(localStorage.getItem("ventas")||"[]")
-let html="",pag=0,pend=0
+async function cargarVentas(){
 
-ventas.forEach((v,i)=>{
+let snapshot=await getDocs(collection(db,"ventas"))
+
+ventasCache=[]
+
+let html=""
+let pag=0,pend=0
+
+snapshot.forEach((docu)=>{
+
+let v={id:docu.id,...docu.data()}
+ventasCache.push(v)
+
 if(filtroActual=="pagado"&&!v.pagado)return
 if(filtroActual=="pendiente"&&v.pagado)return
 
-if(v.pagado)pag+=v.precio;else pend+=v.precio
+if(v.pagado) pag+=v.precio
+else pend+=v.precio
 
 html+=`
 <div class="card line">
 <div>
 <b>${v.cliente}</b> - $${v.precio}<br>
 ${v.figura}<br>
-<input type="checkbox" ${v.pagado?"checked":""} onchange="togglePago(${i})"> Pagado
+<input type="checkbox" ${v.pagado?"checked":""} onchange="togglePago('${v.id}')"> Pagado
 </div>
-<button onclick="eliminarVenta(${i})">🗑</button>
+<button onclick="eliminarVenta('${v.id}')">🗑</button>
 </div>`
 })
 
@@ -398,23 +431,32 @@ tPend.innerText=pend.toFixed(2)
 tTotal.innerText=(pag+pend).toFixed(2)
 }
 
-function togglePago(i){
-let ventas=JSON.parse(localStorage.getItem("ventas"))
-ventas[i].pagado=!ventas[i].pagado
-localStorage.setItem("ventas",JSON.stringify(ventas))
+async function togglePago(id){
+
+let v=ventasCache.find(x=>x.id==id)
+if(!v)return
+
+v.pagado=!v.pagado
+
+await deleteDoc(doc(db,"ventas",id))
+await addDoc(collection(db,"ventas"),v)
+
 cargarVentas()
 }
 
-function eliminarVenta(i){
-let ventas=JSON.parse(localStorage.getItem("ventas"))
-ventas.splice(i,1)
-localStorage.setItem("ventas",JSON.stringify(ventas))
+async function eliminarVenta(id){
+if(confirm("Eliminar venta?")){
+await deleteDoc(doc(db,"ventas",id))
 cargarVentas()
 }
+}
+
+// ================= UI =================
 
 function guardarConfig(){alert("Config guardada")}
 
 function mostrar(tab,el){
+
 calc.style.display=tab=="calc"?"block":"none"
 quotes.style.display=tab=="quotes"?"block":"none"
 sales.style.display=tab=="sales"?"block":"none"
@@ -423,8 +465,8 @@ config.style.display=tab=="config"?"block":"none"
 document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"))
 el.classList.add("active")
 
-if(tab=="quotes")cargarCot()
-if(tab=="sales")cargarVentas()
+if(tab=="quotes") cargarCot()
+if(tab=="sales") cargarVentas()
 }
 
 </script>
