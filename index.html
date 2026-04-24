@@ -8,7 +8,7 @@
 <style>
 *{box-sizing:border-box}
 body{font-family:Arial;background:#0f172a;color:#fff;margin:0}
-.container{max-width:1000px;margin:auto;padding:20px}
+.container{max-width:1100px;margin:auto;padding:20px}
 .tabs{display:flex;gap:5px;margin-bottom:15px}
 .tab{flex:1;padding:12px;background:#334155;cursor:pointer;text-align:center;border-radius:8px}
 .active{background:#2563eb}
@@ -94,6 +94,9 @@ img{max-width:150px;border-radius:8px;margin-top:10px}
 <label>Figura</label>
 <input id="figura">
 
+<label>Fecha</label>
+<input type="date" id="fechaVenta">
+
 <label>Pagado</label>
 <input type="checkbox" id="pagado">
 
@@ -101,6 +104,14 @@ img{max-width:150px;border-radius:8px;margin-top:10px}
 <button onclick="limpiarVenta()">Cancelar</button>
 
 </div>
+
+<div class="card">
+<button onclick="setFiltro('all')">📋 Todas</button>
+<button onclick="setFiltro('pagado')">✅ Pagadas</button>
+<button onclick="setFiltro('pendiente')">⏳ Pendientes</button>
+</div>
+
+<div class="card" id="resumenVentas"></div>
 
 <div id="listaVentas"></div>
 <div id="detalleVenta"></div>
@@ -164,6 +175,7 @@ let configData={costoKg:20,extraFil:20,extraTime:10,costoHora:0.23,costoEnergia:
 let ultima={}
 let cotizacionesCache=[]
 let ventasCache=[]
+let filtroVenta="all"
 
 // CONFIG
 async function cargarConfig(){
@@ -350,17 +362,23 @@ cliente.value=""
 precio.value=""
 figura.value=""
 pagado.checked=false
+fechaVenta.value=""
 }
 
 async function guardarVenta(){
 
 if(!cliente.value) return alert("Cliente requerido")
 
+let fechaVal = fechaVenta.value 
+  ? new Date(fechaVenta.value)
+  : new Date()
+
 let data={
 cliente:cliente.value,
 precio:Number((+precio.value||0).toFixed(2)),
 figura:figura.value,
-pagado:pagado.checked
+pagado:pagado.checked,
+fecha:fechaVal
 }
 
 if(ventaId.value){
@@ -375,22 +393,47 @@ limpiarVenta()
 cargarVentas()
 }
 
+function setFiltro(tipo){
+filtroVenta=tipo
+cargarVentas()
+}
+
 async function cargarVentas(){
 
 let snap=await getDocs(collection(db,"ventas"))
 ventasCache=[]
+
+let total=0
+let totalPagado=0
+let totalPendiente=0
+
 let html=""
 
 snap.forEach(d=>{
 let v={id:d.id,...d.data()}
 ventasCache.push(v)
 
+if(filtroVenta==="pagado" && !v.pagado) return
+if(filtroVenta==="pendiente" && v.pagado) return
+
+let fecha = v.fecha?.seconds
+  ? new Date(v.fecha.seconds * 1000)
+  : new Date()
+
+let precio = Number(v.precio||0)
+
+total += precio
+if(v.pagado) totalPagado += precio
+else totalPendiente += precio
+
 html+=`
 <div class="card line" onclick="verDetalleVenta('${v.id}')">
 
 <div>
 <b>${v.cliente}</b><br>
-$${Number(v.precio).toFixed(2)}<br>
+$${precio.toFixed(2)}<br>
+${fecha.toLocaleDateString()}<br>
+
 <span style="color:${v.pagado?"#22c55e":"#ef4444"}">
 ${v.pagado?"Pagado":"Pendiente"}
 </span>
@@ -406,11 +449,21 @@ ${v.pagado?"Pagado":"Pendiente"}
 })
 
 listaVentas.innerHTML=html
+
+resumenVentas.innerHTML=`
+<b>Total:</b> $${total.toFixed(2)}<br>
+<b>Pagado:</b> $${totalPagado.toFixed(2)}<br>
+<b>Pendiente:</b> $${totalPendiente.toFixed(2)}
+`
 }
 
 function verDetalleVenta(id){
 
 let v=ventasCache.find(x=>x.id==id)
+
+let fecha = v.fecha?.seconds
+  ? new Date(v.fecha.seconds * 1000)
+  : new Date()
 
 detalleVenta.innerHTML=`
 <div class="card">
@@ -418,6 +471,7 @@ detalleVenta.innerHTML=`
 
 <b>Cliente:</b> ${v.cliente}<br>
 <b>Precio:</b> $${Number(v.precio).toFixed(2)}<br>
+<b>Fecha:</b> ${fecha.toLocaleDateString()}<br>
 <b>Estado:</b> ${v.pagado?"Pagado":"Pendiente"}
 
 </div>
@@ -433,6 +487,12 @@ cliente.value=v.cliente
 precio.value=v.precio
 figura.value=v.figura
 pagado.checked=v.pagado
+
+let fecha = v.fecha?.seconds
+  ? new Date(v.fecha.seconds * 1000)
+  : new Date()
+
+fechaVenta.value = fecha.toISOString().split("T")[0]
 
 mostrar("sales",document.querySelectorAll(".tab")[2])
 }
