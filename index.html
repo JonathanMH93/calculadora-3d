@@ -460,24 +460,44 @@ cargarVentas()
 // UI
 function mostrar(tab,el){
 
-calc.style.display="none"
-quotes.style.display="none"
-sales.style.display="none"
-config.style.display="none"
+// obtener referencias seguras
+const calcDiv=document.getElementById("calc")
+const quotesDiv=document.getElementById("quotes")
+const salesDiv=document.getElementById("sales")
+const configDiv=document.getElementById("config")
 
-document.getElementById(tab).style.display="block"
+// ocultar todo
+calcDiv.style.display="none"
+quotesDiv.style.display="none"
+salesDiv.style.display="none"
+configDiv.style.display="none"
 
-document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"))
-el.classList.add("active")
+// mostrar seleccionado
+const target=document.getElementById(tab)
+if(target) target.style.display="block"
 
-if(tab=="quotes")cargarCot()
-if(tab=="sales")cargarVentas()
-if(tab=="config")cargarConfig()
+// actualizar tabs
+const tabs=document.querySelectorAll(".tab")
+tabs.forEach(t=>t.classList.remove("active"))
+if(el) el.classList.add("active")
+
+// cargar datos
+if(tab=="quotes") cargarCot()
+if(tab=="sales") cargarVentas()
+if(tab=="config") cargarConfig()
+
 }
 
 // INIT
 window.addEventListener("load",()=>{
+
+// asegurar que la UI inicial siempre sea visible
+const tabInicial=document.getElementById("tabCalc")
+mostrar("calc",tabInicial)
+
+// cargar configuración después
 cargarConfig()
+
 })
 
 </script>
