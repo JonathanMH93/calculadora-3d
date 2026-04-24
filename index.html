@@ -167,336 +167,329 @@ window.serverTimestamp=serverTimestamp;
 
 <script>
 
-let config={costoKg:20,extraFil:20,extraTime:10,costoHora:0.23,costoEnergia:0.2}
-let ultima={}
-let cotizacionesCache=[]
-let ventasCache=[]
+// =============================
+// ESTADO GLOBAL
+// =============================
+
+let config = {
+  costoKg: 20,
+  extraFil: 20,
+  extraTime: 10,
+  costoHora: 0.23,
+  costoEnergia: 0.2
+}
+
+let ultima = null
+let editandoCotId = null
+let editandoVentaId = null
+let imgData = null
+
+// =============================
+// UTILIDADES
+// =============================
 
 function toast(msg){
-let t=document.getElementById("toast")
-t.innerText=msg
- t.style.display="block"
- setTimeout(()=>t.style.display="none",2000)
+  alert(msg)
 }
 
-function money(n){
-if(!n)return "$ 0.00"
-return Number(n).toLocaleString("es-EC",{style:"currency",currency:"USD"})
+function formatearFechaInput(fecha){
+  try{
+    const d = new Date(fecha)
+    return d.toISOString().split('T')[0]
+  }catch{
+    return ''
+  }
 }
 
+function limpiarFormCot(){
+  document.getElementById("figura").value = ""
+  document.getElementById("precio").value = ""
+  document.getElementById("obs").value = ""
+  document.getElementById("link").value = ""
+  document.getElementById("foto").value = ""
+  imgData = null
+  editandoCotId = null
+}
+
+function limpiarFormVenta(){
+  document.getElementById("cliente").value = ""
+  document.getElementById("ventaPrecio").value = ""
+  document.getElementById("ventaObs").value = ""
+  document.getElementById("ventaFecha").value = formatearFechaInput(new Date())
+  document.getElementById("pagadoCheck").checked = false
+  editandoVentaId = null
+}
+
+// =============================
+// NAVEGACION
+// =============================
+
+function mostrar(tab,el){
+
+  const calcDiv=document.getElementById("calc")
+  const quotesDiv=document.getElementById("quotes")
+  const salesDiv=document.getElementById("sales")
+  const configDiv=document.getElementById("config")
+
+  calcDiv.style.display="none"
+  quotesDiv.style.display="none"
+  salesDiv.style.display="none"
+  configDiv.style.display="none"
+
+  const target=document.getElementById(tab)
+  if(target) target.style.display="block"
+
+  const tabs=document.querySelectorAll(".tab")
+  tabs.forEach(t=>t.classList.remove("active"))
+  if(el) el.classList.add("active")
+
+  if(tab=="quotes") cargarCot()
+  if(tab=="sales") cargarVentas()
+  if(tab=="config") cargarConfig()
+}
+
+// =============================
 // CONFIG
+// =============================
+
 async function cargarConfig(){
-try{
-let ref=doc(db,"config","default")
-let snap=await getDoc(ref)
+  try{
+    const ref = doc(db,"config","general")
+    const snap = await getDoc(ref)
 
-if(snap.exists()){
-config=snap.data()
-}else{
-await setDoc(ref,config)
+    if(snap.exists()){
+      config = snap.data()
+    }else{
+      await setDoc(ref,config)
+    }
+
+    document.getElementById("costoKg").value=config.costoKg
+    document.getElementById("extraFil").value=config.extraFil
+    document.getElementById("extraTime").value=config.extraTime
+    document.getElementById("costoHora").value=config.costoHora
+    document.getElementById("costoEnergia").value=config.costoEnergia
+
+  }catch(e){
+    console.error(e)
+  }
 }
 
-costoKg.value=config.costoKg
-extraFil.value=config.extraFil
-extraTime.value=config.extraTime
-costoHora.value=config.costoHora
-costoEnergia.value=config.costoEnergia
-
-}catch(e){
-console.error(e)
-toast("Error cargando config")
-}
-}
-
-async function guardarConfig(){
-config.costoKg=+costoKg.value||0
-config.extraFil=+extraFil.value||0
-config.extraTime=+extraTime.value||0
-config.costoHora=+costoHora.value||0
-config.costoEnergia=+costoEnergia.value||0
-
-await setDoc(doc(db,"config","default"),config)
-
-toast("Configuración guardada")
-}
-
-// CALC
-function calcular(){
-if(!config)return toast("Config no cargada")
-
-let f=+fil.value||0
-let h1=+h.value||0
-let m1=+m.value||0
-
-let total=((f*(1+config.extraFil/100)/1000)*config.costoKg)+
-((h1+m1/60)*(1+config.extraTime/100)*(config.costoHora+config.costoEnergia))
-
-total*=1.6
-
-document.getElementById("total").innerText=money(total)
-
-ultima={
-f,
-h:h1,
-m:m1,
-total,
-fecha:new Date()
-}
-
-btnCot.style.display="block"
-}
-
-function irCot(){
-mostrar("quotes",document.getElementById("tabQuotes"))
-
-// autocompletar descripcion basica
-if(ultima.total){
-if(!desc.value)
-desc.value=`Impresión 3D ${ultima.f}g`
-}
-}
-
-// IMAGEN
-function fileToBase64(file){
-return new Promise((resolve,reject)=>{
-let reader=new FileReader()
-reader.readAsDataURL(file)
-reader.onload=()=>resolve(reader.result)
-reader.onerror=error=>reject(error)
-})
-}
-
+// =============================
 // COTIZACIONES
+// =============================
+
 async function guardarCot(){
-if(!desc.value)return alert("Descripción requerida")
 
-let imgData=""
+  const data={
+    desc: document.getElementById("figura").value,
+    total: +document.getElementById("precio").value || 0,
+    obs: document.getElementById("obs").value,
+    link: document.getElementById("link").value,
+    img: imgData || null,
+    fecha: new Date()
+  }
 
-if(foto.files[0]){
-imgData=await fileToBase64(foto.files[0])
-}
+  try{
 
-let id=cotId.value
+    if(editandoCotId){
 
-let data={
-...ultima,
-desc:desc.value,
-link:link.value,
-obs:obs.value,
-img:imgData,
-fecha:serverTimestamp()
-}
+      await updateDoc(doc(db,"cotizaciones",editandoCotId),data)
+      toast("Cotización actualizada")
 
-if(id){
-await updateDoc(doc(db,"cotizaciones",id),data)
-toast("Cotización actualizada")
-}else{
-await addDoc(collection(db,"cotizaciones"),data)
-toast("Cotización guardada")
-}
+    }else{
 
-limpiarCot()
-cargarCot()
-}
+      await addDoc(collection(db,"cotizaciones"),data)
+      toast("Cotización guardada")
 
-function limpiarCot(){
-cotId.value=""
-desc.value=""
-link.value=""
-obs.value=""
-foto.value=""
+    }
+
+    limpiarFormCot()
+    cargarCot()
+
+  }catch(e){
+    console.error(e)
+    toast("Error al guardar")
+  }
 }
 
 async function cargarCot(){
-let snap=await getDocs(collection(db,"cotizaciones"))
-cotizacionesCache=[]
-let html=""
 
-snap.forEach(d=>{
-let c={id:d.id,...d.data()}
-cotizacionesCache.push(c)
+  const listaDiv=document.getElementById("cotizacionesDiv")
+  if(!listaDiv) return
 
-html+=`<div class="card line" onclick="verDetalleCot('${c.id}')">
-<div>
-<b>${c.desc}</b><br>
-${money(c.total)}
-</div>
-<div>
-<button onclick="event.stopPropagation(); editarCot('${c.id}')">✏️</button>
-<button onclick="event.stopPropagation(); crearVenta('${c.id}')">💵</button>
-<button class="danger" onclick="event.stopPropagation(); eliminarCot('${c.id}')">🗑</button>
-</div>
-</div>`
-})
+  listaDiv.innerHTML=""
 
-listaCot.innerHTML=html
+  const q=await getDocs(collection(db,"cotizaciones"))
+
+  q.forEach(docu=>{
+
+    const c=docu.data()
+    const id=docu.id
+
+    const card=document.createElement("div")
+    card.className="card"
+
+    card.innerHTML=`
+      <div><b>${c.desc}</b></div>
+      <div>$ ${( +c.total).toFixed(2)}</div>
+      <div>
+        <button onclick="editarCot('${id}')">✏️</button>
+        <button onclick="pasarAVenta('${id}')">💵</button>
+      </div>
+    `
+
+    listaDiv.appendChild(card)
+
+  })
 }
 
-function verDetalleCot(id){
-let c=cotizacionesCache.find(x=>x.id==id)
+async function editarCot(id){
 
-let html=`
-<div class="card">
-<h3>Detalle</h3>
-<b>${c.desc}</b><br>
-${money(c.total)}<br>
-${c.obs||""}
-${c.img?`<br><img src="${c.img}">`:""}
-</div>`
+  editandoCotId=id
 
-detalleCot.innerHTML=html
+  const snap=await getDoc(doc(db,"cotizaciones",id))
+  if(!snap.exists()) return
+
+  const c=snap.data()
+
+  document.getElementById("figura").value=c.desc
+  document.getElementById("precio").value=c.total
+  document.getElementById("obs").value=c.obs || ""
+  document.getElementById("link").value=c.link || ""
+
+  imgData=c.img || null
+
+  mostrar("quotes", document.getElementById("tabQuotes"))
 }
 
-function editarCot(id){
-let c=cotizacionesCache.find(x=>x.id==id)
-
-cotId.value=c.id
-
-desc.value=c.desc||""
-link.value=c.link||""
-obs.value=c.obs||""
-
-mostrar("quotes",document.getElementById("tabQuotes"))
-}
-
-async function eliminarCot(id){
-if(!confirm("Eliminar cotización?"))return
-await deleteDoc(doc(db,"cotizaciones",id))
-toast("Eliminado")
-cargarCot()
-}
-
-function crearVenta(id){
-let c=cotizacionesCache.find(x=>x.id==id)
-
-mostrar("sales",document.getElementById("tabSales"))
-
-setTimeout(()=>{
-precio.value=c.total
-figura.value=c.desc
-},50)
-}
-
+// =============================
 // VENTAS
+// =============================
+
 async function guardarVenta(){
-if(!cliente.value)return alert("Cliente requerido")
 
-let id=ventaId.value
+  const fechaInput=document.getElementById("ventaFecha").value
 
-let data={
-cliente:cliente.value,
-precio:+precio.value||0,
-figura:figura.value,
-pagado:pagado.checked,
-fecha:serverTimestamp()
-}
+  const data={
+    cliente: document.getElementById("cliente").value,
+    desc: document.getElementById("ventaDesc").value,
+    total: +document.getElementById("ventaPrecio").value || 0,
+    obs: document.getElementById("ventaObs").value,
+    pagado: document.getElementById("pagadoCheck").checked,
+    fecha: new Date(fechaInput)
+  }
 
-if(id){
-await updateDoc(doc(db,"ventas",id),data)
-toast("Venta actualizada")
-}else{
-await addDoc(collection(db,"ventas"),data)
-toast("Venta guardada")
-}
+  try{
 
-limpiarVenta()
-cargarVentas()
-}
+    if(editandoVentaId){
+      await updateDoc(doc(db,"ventas",editandoVentaId),data)
+      toast("Venta actualizada")
+    }else{
+      await addDoc(collection(db,"ventas"),data)
+      toast("Venta guardada")
+    }
 
-function limpiarVenta(){
-ventaId.value=""
-cliente.value=""
-precio.value=""
-figura.value=""
-pagado.checked=false
+    limpiarFormVenta()
+    cargarVentas()
+
+  }catch(e){
+    console.error(e)
+    toast("Error al guardar venta")
+  }
 }
 
 async function cargarVentas(){
-let snap=await getDocs(collection(db,"ventas"))
-ventasCache=[]
-let html=""
 
-snap.forEach(d=>{
-let v={id:d.id,...d.data()}
-ventasCache.push(v)
+  const ventasDiv=document.getElementById("ventasDiv")
+  const resumenDiv=document.getElementById("resumenVentas")
 
-html+=`<div class="card line">
-<div>
-<b>${v.figura}</b><br>
-${money(v.precio)}<br>
-<span class="badge ${v.pagado?"pagado":"pendiente"}">
-${v.pagado?"Pagado":"Pendiente"}
-</span>
-</div>
-<div>
-<button onclick="editarVenta('${v.id}')">✏️</button>
-<button class="danger" onclick="eliminarVenta('${v.id}')">🗑</button>
-</div>
-</div>`
-})
+  if(!ventasDiv) return
 
-listaVentas.innerHTML=html
+  ventasDiv.innerHTML=""
+
+  let total=0
+  let pagado=0
+  let pendiente=0
+
+  const q=await getDocs(collection(db,"ventas"))
+
+  q.forEach(docu=>{
+
+    const v=docu.data()
+    const id=docu.id
+
+    const monto=+v.total || 0
+
+    total+=monto
+
+    if(v.pagado) pagado+=monto
+    else pendiente+=monto
+
+    const fecha=v.fecha?.seconds
+      ? new Date(v.fecha.seconds*1000)
+      : new Date(v.fecha)
+
+    const card=document.createElement("div")
+    card.className="card"
+
+    card.onclick=()=>verVentaDetalle(v)
+
+    card.innerHTML=`
+      <div><b>${v.cliente || "Cliente"}</b></div>
+      <div>$ ${monto.toFixed(2)}</div>
+      <div>${fecha.toLocaleDateString()}</div>
+      <div>${v.pagado ? "✔ Pagado" : "Pendiente"}</div>
+    `
+
+    ventasDiv.appendChild(card)
+
+  })
+
+  if(resumenDiv){
+    resumenDiv.innerHTML=`
+      Total: $ ${total.toFixed(2)} | 
+      Pagado: $ ${pagado.toFixed(2)} | 
+      Pendiente: $ ${pendiente.toFixed(2)}
+    `
+  }
 }
 
-function editarVenta(id){
-let v=ventasCache.find(x=>x.id==id)
+function verVentaDetalle(v){
 
-ventaId.value=v.id
-cliente.value=v.cliente
-precio.value=v.precio
-figura.value=v.figura
-pagado.checked=v.pagado
+  const detalle=document.getElementById("detalleVentaDiv")
+  if(!detalle) return
 
-mostrar("sales",document.getElementById("tabSales"))
+  let imgHTML=""
+  if(v.img) imgHTML=`<img src="${v.img}" style="max-width:200px;margin-top:10px">`
+
+  const fecha=v.fecha?.seconds
+    ? new Date(v.fecha.seconds*1000)
+    : new Date(v.fecha)
+
+  detalle.innerHTML=`
+    <h3>Detalle de Venta</h3>
+    <b>Cliente:</b> ${v.cliente || "-"}<br>
+    <b>Descripción:</b> ${v.desc || "-"}<br>
+    <b>Total:</b> $ ${( +v.total || 0).toFixed(2)}<br>
+    <b>Fecha:</b> ${fecha.toLocaleDateString()}<br>
+    <b>Estado:</b> ${v.pagado ? "Pagado" : "Pendiente"}<br>
+    <b>Observaciones:</b> ${v.obs || "-"}<br>
+    ${imgHTML}
+  `
 }
 
-async function eliminarVenta(id){
-if(!confirm("Eliminar venta?"))return
-await deleteDoc(doc(db,"ventas",id))
-toast("Venta eliminada")
-cargarVentas()
-}
-
-// UI
-function mostrar(tab,el){
-
-// obtener referencias seguras
-const calcDiv=document.getElementById("calc")
-const quotesDiv=document.getElementById("quotes")
-const salesDiv=document.getElementById("sales")
-const configDiv=document.getElementById("config")
-
-// ocultar todo
-calcDiv.style.display="none"
-quotesDiv.style.display="none"
-salesDiv.style.display="none"
-configDiv.style.display="none"
-
-// mostrar seleccionado
-const target=document.getElementById(tab)
-if(target) target.style.display="block"
-
-// actualizar tabs
-const tabs=document.querySelectorAll(".tab")
-tabs.forEach(t=>t.classList.remove("active"))
-if(el) el.classList.add("active")
-
-// cargar datos
-if(tab=="quotes") cargarCot()
-if(tab=="sales") cargarVentas()
-if(tab=="config") cargarConfig()
-
-}
-
+// =============================
 // INIT
+// =============================
+
 window.addEventListener("load",()=>{
 
-// asegurar que la UI inicial siempre sea visible
-const tabInicial=document.getElementById("tabCalc")
-mostrar("calc",tabInicial)
+  const tabInicial=document.getElementById("tabCalc")
+  mostrar("calc",tabInicial)
 
-// cargar configuración después
-cargarConfig()
+  cargarConfig()
+
+  limpiarFormVenta()
 
 })
 
