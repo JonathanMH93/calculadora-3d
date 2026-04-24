@@ -24,7 +24,6 @@ button.gray{background:#64748b}
 .badge{padding:4px 8px;border-radius:6px;font-size:12px}
 .pagado{background:#16a34a}
 .pendiente{background:#dc2626}
-img{max-width:120px;border-radius:8px;margin-top:8px}
 </style>
 </head>
 
@@ -33,21 +32,21 @@ img{max-width:120px;border-radius:8px;margin-top:8px}
 <div class="container">
 
 <div class="tabs">
-<div class="tab active" id="tabCalc" onclick="mostrar('calc',this)">💵 Calcular</div>
-<div class="tab" id="tabQuotes" onclick="mostrar('quotes',this)">📦 Cotizaciones</div>
-<div class="tab" id="tabSales" onclick="mostrar('sales',this)">💵 Ventas</div>
-<div class="tab" id="tabConfig" onclick="mostrar('config',this)">⚙️ Config</div>
+<div class="tab active" onclick="mostrar('calc',this)">💵 Calcular</div>
+<div class="tab" onclick="mostrar('quotes',this)">📦 Cotizaciones</div>
+<div class="tab" onclick="mostrar('sales',this)">💵 Ventas</div>
+<div class="tab" onclick="mostrar('config',this)">⚙️ Config</div>
 </div>
 
 <!-- CALC -->
 <div id="calc">
 <div class="card">
 <label>Filamento (g)</label>
-<input id="fil" type="number" min="0">
+<input id="fil" type="number">
 <label>Horas</label>
-<input id="h" type="number" min="0">
+<input id="h" type="number">
 <label>Minutos</label>
-<input id="m" type="number" min="0">
+<input id="m" type="number">
 </div>
 
 <button onclick="calcular()">Calcular</button>
@@ -77,11 +76,9 @@ img{max-width:120px;border-radius:8px;margin-top:8px}
 
 <button onclick="guardarCot()">Guardar</button>
 <button class="gray" onclick="limpiarCot()">Cancelar</button>
-<button onclick="cargarCot()">🔄 Refrescar</button>
 </div>
 
 <div id="listaCot"></div>
-
 <div id="detalleCot"></div>
 
 </div>
@@ -96,18 +93,27 @@ img{max-width:120px;border-radius:8px;margin-top:8px}
 <input id="cliente">
 
 <label>Precio</label>
-<input id="precio" type="number" step="0.01">
+<input id="precio" type="number">
 
 <label>Figura</label>
 <input id="figura">
+
+<label>Fecha</label>
+<input type="date" id="fechaVenta">
 
 <input type="checkbox" id="pagado"> Pagado
 
 <button onclick="guardarVenta()">Guardar venta</button>
 <button class="gray" onclick="limpiarVenta()">Cancelar</button>
-<button onclick="cargarVentas()">🔄 Refrescar</button>
 </div>
 
+<div style="margin-bottom:10px">
+<button onclick="setFiltro('all')">Todos</button>
+<button onclick="setFiltro('pagado')">Pagados</button>
+<button onclick="setFiltro('pendiente')">Pendientes</button>
+</div>
+
+<div id="resumenVentas"></div>
 <div id="listaVentas"></div>
 
 </div>
@@ -117,19 +123,19 @@ img{max-width:120px;border-radius:8px;margin-top:8px}
 <div class="card">
 
 <label>Costo kg</label>
-<input id="costoKg" type="number" step="0.01">
+<input id="costoKg">
 
 <label>% extra filamento</label>
-<input id="extraFil" type="number">
+<input id="extraFil">
 
 <label>% extra tiempo</label>
-<input id="extraTime" type="number">
+<input id="extraTime">
 
 <label>Costo máquina</label>
-<input id="costoHora" type="number" step="0.01">
+<input id="costoHora">
 
 <label>Costo energía</label>
-<input id="costoEnergia" type="number" step="0.01">
+<input id="costoEnergia">
 
 <button onclick="guardarConfig()">Guardar</button>
 
@@ -140,6 +146,7 @@ img{max-width:120px;border-radius:8px;margin-top:8px}
 
 <div id="toast" class="toast"></div>
 
+<!-- FIREBASE -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -171,59 +178,48 @@ let config={costoKg:20,extraFil:20,extraTime:10,costoHora:0.23,costoEnergia:0.2}
 let ultima={}
 let cotizacionesCache=[]
 let ventasCache=[]
+let filtroVentas="all"
 
 function toast(msg){
 let t=document.getElementById("toast")
 t.innerText=msg
- t.style.display="block"
- setTimeout(()=>t.style.display="none",2000)
+t.style.display="block"
+setTimeout(()=>t.style.display="none",2000)
 }
 
 function money(n){
-if(!n)return "$ 0.00"
-return Number(n).toLocaleString("es-EC",{style:"currency",currency:"USD"})
+return Number(n||0).toLocaleString("es-EC",{style:"currency",currency:"USD"})
 }
 
 // CONFIG
 async function cargarConfig(){
-try{
 let ref=doc(db,"config","default")
 let snap=await getDoc(ref)
 
-if(snap.exists()){
-config=snap.data()
-}else{
-await setDoc(ref,config)
-}
+if(snap.exists()) config=snap.data()
+else await setDoc(ref,config)
 
 costoKg.value=config.costoKg
 extraFil.value=config.extraFil
 extraTime.value=config.extraTime
 costoHora.value=config.costoHora
 costoEnergia.value=config.costoEnergia
-
-}catch(e){
-console.error(e)
-toast("Error cargando config")
-}
 }
 
 async function guardarConfig(){
-config.costoKg=+costoKg.value||0
-config.extraFil=+extraFil.value||0
-config.extraTime=+extraTime.value||0
-config.costoHora=+costoHora.value||0
-config.costoEnergia=+costoEnergia.value||0
-
+config={
+costoKg:+costoKg.value||0,
+extraFil:+extraFil.value||0,
+extraTime:+extraTime.value||0,
+costoHora:+costoHora.value||0,
+costoEnergia:+costoEnergia.value||0
+}
 await setDoc(doc(db,"config","default"),config)
-
 toast("Configuración guardada")
 }
 
 // CALC
 function calcular(){
-if(!config)return toast("Config no cargada")
-
 let f=+fil.value||0
 let h1=+h.value||0
 let m1=+m.value||0
@@ -233,78 +229,25 @@ let total=((f*(1+config.extraFil/100)/1000)*config.costoKg)+
 
 total*=1.6
 
-document.getElementById("total").innerText=money(total)
+totalSpan.innerText=money(total)
 
-ultima={
-f,
-h:h1,
-m:m1,
-total,
-fecha:new Date()
-}
+ultima={f,h:h1,m:m1,total}
 
 btnCot.style.display="block"
 }
 
 function irCot(){
-mostrar("quotes",document.getElementById("tabQuotes"))
-
-// autocompletar descripcion basica
-if(ultima.total){
-if(!desc.value)
-desc.value=`Impresión 3D ${ultima.f}g`
-}
+mostrar("quotes",document.querySelectorAll(".tab")[1])
 }
 
-// IMAGEN
-function fileToBase64(file){
-return new Promise((resolve,reject)=>{
-let reader=new FileReader()
-reader.readAsDataURL(file)
-reader.onload=()=>resolve(reader.result)
-reader.onerror=error=>reject(error)
-})
-}
-
-// COTIZACIONES
+// COT
 async function guardarCot(){
-if(!desc.value)return alert("Descripción requerida")
-
-let imgData=""
-
-if(foto.files[0]){
-imgData=await fileToBase64(foto.files[0])
-}
-
-let id=cotId.value
-
-let data={
+await addDoc(collection(db,"cotizaciones"),{
 ...ultima,
 desc:desc.value,
-link:link.value,
-obs:obs.value,
-img:imgData,
 fecha:serverTimestamp()
-}
-
-if(id){
-await updateDoc(doc(db,"cotizaciones",id),data)
-toast("Cotización actualizada")
-}else{
-await addDoc(collection(db,"cotizaciones"),data)
-toast("Cotización guardada")
-}
-
-limpiarCot()
+})
 cargarCot()
-}
-
-function limpiarCot(){
-cotId.value=""
-desc.value=""
-link.value=""
-obs.value=""
-foto.value=""
 }
 
 async function cargarCot(){
@@ -316,15 +259,12 @@ snap.forEach(d=>{
 let c={id:d.id,...d.data()}
 cotizacionesCache.push(c)
 
-html+=`<div class="card line" onclick="verDetalleCot('${c.id}')">
+html+=`
+<div class="card line">
+<div>${c.desc} - ${money(c.total)}</div>
 <div>
-<b>${c.desc}</b><br>
-${money(c.total)}
-</div>
-<div>
-<button onclick="event.stopPropagation(); editarCot('${c.id}')">✏️</button>
-<button onclick="event.stopPropagation(); crearVenta('${c.id}')">💵</button>
-<button class="danger" onclick="event.stopPropagation(); eliminarCot('${c.id}')">🗑</button>
+<button onclick="crearVenta('${c.id}')">💵</button>
+<button onclick="eliminarCot('${c.id}')">🗑</button>
 </div>
 </div>`
 })
@@ -332,277 +272,112 @@ ${money(c.total)}
 listaCot.innerHTML=html
 }
 
-function verDetalleCot(id){
-let c=cotizacionesCache.find(x=>x.id==id)
-
-let html=`
-<div class="card">
-<h3>Detalle</h3>
-<b>${c.desc}</b><br>
-${money(c.total)}<br>
-${c.obs||""}
-${c.img?`<br><img src="${c.img}">`:""}
-</div>`
-
-detalleCot.innerHTML=html
-}
-
-function editarCot(id){
-let c=cotizacionesCache.find(x=>x.id==id)
-
-cotId.value=c.id
-
-desc.value=c.desc||""
-link.value=c.link||""
-obs.value=c.obs||""
-
-mostrar("quotes",document.getElementById("tabQuotes"))
-}
-
 async function eliminarCot(id){
-if(!confirm("Eliminar cotización?"))return
 await deleteDoc(doc(db,"cotizaciones",id))
-toast("Eliminado")
 cargarCot()
 }
 
 function crearVenta(id){
 let c=cotizacionesCache.find(x=>x.id==id)
 
-mostrar("sales",document.getElementById("tabSales"))
+mostrar("sales",document.querySelectorAll(".tab")[2])
 
 setTimeout(()=>{
 precio.value=c.total
 figura.value=c.desc
+fechaVenta.value=new Date().toISOString().split("T")[0]
 },50)
 }
 
 // VENTAS
+function setFiltro(f){
+filtroVentas=f
+cargarVentas()
+}
+
 async function guardarVenta(){
-if(!cliente.value)return alert("Cliente requerido")
 
-let id=ventaId.value
+let fechaVal = fechaVenta.value 
+? new Date(fechaVenta.value)
+: new Date()
 
-let data={
+await addDoc(collection(db,"ventas"),{
 cliente:cliente.value,
 precio:+precio.value||0,
 figura:figura.value,
 pagado:pagado.checked,
-fecha:serverTimestamp()
-}
+fecha:fechaVal
+})
 
-if(id){
-await updateDoc(doc(db,"ventas",id),data)
-toast("Venta actualizada")
-}else{
-await addDoc(collection(db,"ventas"),data)
 toast("Venta guardada")
-}
-
-limpiarVenta()
 cargarVentas()
 }
 
-function limpiarVenta(){
-ventaId.value=""
-cliente.value=""
-precio.value=""
-figura.value=""
-pagado.checked=false
-}
-
 async function cargarVentas(){
+
 let snap=await getDocs(collection(db,"ventas"))
-ventasCache=[]
+
 let html=""
+let total=0,pag=0,pend=0
 
 snap.forEach(d=>{
-let v={id:d.id,...d.data()}
-ventasCache.push(v)
 
-html+=`<div class="card line">
+let v=d.data()
+
+if(filtroVentas==="pagado" && !v.pagado) return
+if(filtroVentas==="pendiente" && v.pagado) return
+
+let precio=+v.precio||0
+
+total+=precio
+if(v.pagado) pag+=precio
+else pend+=precio
+
+let fecha=v.fecha?.seconds
+? new Date(v.fecha.seconds*1000)
+: new Date()
+
+html+=`
+<div class="card line">
 <div>
 <b>${v.figura}</b><br>
-${money(v.precio)}<br>
+${money(precio)}<br>
+${fecha.toLocaleDateString()}<br>
 <span class="badge ${v.pagado?"pagado":"pendiente"}">
 ${v.pagado?"Pagado":"Pendiente"}
 </span>
-</div>
-<div>
-<button onclick="editarVenta('${v.id}')">✏️</button>
-<button class="danger" onclick="eliminarVenta('${v.id}')">🗑</button>
 </div>
 </div>`
 })
 
 listaVentas.innerHTML=html
-}
 
-function editarVenta(id){
-let v=ventasCache.find(x=>x.id==id)
-
-ventaId.value=v.id
-cliente.value=v.cliente
-precio.value=v.precio
-figura.value=v.figura
-pagado.checked=v.pagado
-
-mostrar("sales",document.getElementById("tabSales"))
-}
-
-async function eliminarVenta(id){
-if(!confirm("Eliminar venta?"))return
-await deleteDoc(doc(db,"ventas",id))
-toast("Venta eliminada")
-cargarVentas()
+resumenVentas.innerHTML=`
+💰 Total: ${money(total)} |
+✅ Pagado: ${money(pag)} |
+⏳ Pendiente: ${money(pend)}
+`
 }
 
 // UI
 function mostrar(tab,el){
 
-// obtener referencias seguras
-const calcDiv=document.getElementById("calc")
-const quotesDiv=document.getElementById("quotes")
-const salesDiv=document.getElementById("sales")
-const configDiv=document.getElementById("config")
+calc.style.display="none"
+quotes.style.display="none"
+sales.style.display="none"
+config.style.display="none"
 
-// ocultar todo
-calcDiv.style.display="none"
-quotesDiv.style.display="none"
-salesDiv.style.display="none"
-configDiv.style.display="none"
+document.getElementById(tab).style.display="block"
 
-// mostrar seleccionado
-const target=document.getElementById(tab)
-if(target) target.style.display="block"
+document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"))
+el.classList.add("active")
 
-// actualizar tabs
-const tabs=document.querySelectorAll(".tab")
-tabs.forEach(t=>t.classList.remove("active"))
-if(el) el.classList.add("active")
-
-// cargar datos
 if(tab=="quotes") cargarCot()
 if(tab=="sales") cargarVentas()
 if(tab=="config") cargarConfig()
-
 }
 
-// INIT
-window.addEventListener("load",()=>{
-
-// asegurar que la UI inicial siempre sea visible
-const tabInicial=document.getElementById("tabCalc")
-mostrar("calc",tabInicial)
-
-// cargar configuración después
-cargarConfig()
-
-})
-
-// ===== MEJORAS VENTAS v2 =====
-
-function formatearFechaInput(fecha){
-  try{
-    const d=new Date(fecha)
-    return d.toISOString().split('T')[0]
-  }catch{
-    return ''
-  }
-}
-
-// Sobrescribe renderVentas con resumen y detalle
-async function renderVentas(lista){
-
-  const ventasDiv=document.getElementById("ventasDiv")
-  const resumenDiv=document.getElementById("resumenVentas") || document.createElement("div")
-  resumenDiv.id="resumenVentas"
-  resumenDiv.style.marginBottom="10px"
-  resumenDiv.style.fontWeight="bold"
-
-  if(ventasDiv && !document.getElementById("resumenVentas")){
-    ventasDiv.parentNode.insertBefore(resumenDiv, ventasDiv)
-  }
-
-  if(!ventasDiv) return
-
-  ventasDiv.innerHTML=""
-
-  let total=0
-  let pagado=0
-  let pendiente=0
-
-  lista.forEach(v=>{
-
-    const monto=+v.total || 0
-
-    total+=monto
-
-    if(v.pagado) pagado+=monto
-    else pendiente+=monto
-
-    const card=document.createElement("div")
-    card.className="card"
-
-    card.onclick=()=>verVentaDetalle(v)
-
-    const fecha=v.fecha?.seconds
-      ? new Date(v.fecha.seconds*1000)
-      : new Date(v.fecha || Date.now())
-
-    card.innerHTML=`
-      <div><b>${v.cliente || "Cliente"}</b></div>
-      <div>$ ${monto.toFixed(2)}</div>
-      <div>${fecha.toLocaleDateString()}</div>
-      <div>${v.pagado ? "✔ Pagado" : "Pendiente"}</div>
-    `
-
-    ventasDiv.appendChild(card)
-
-  })
-
-  resumenDiv.innerHTML=`
-    Total ventas: $ ${total.toFixed(2)} | 
-    Pagado: $ ${pagado.toFixed(2)} | 
-    Pendiente: $ ${pendiente.toFixed(2)}
-  `
-}
-
-function verVentaDetalle(v){
-
-  const detalle=document.getElementById("detalleVentaDiv") || document.createElement("div")
-  detalle.id="detalleVentaDiv"
-  detalle.style.marginTop="10px"
-
-  const contenedor=document.getElementById("ventasDiv")
-  if(contenedor && !document.getElementById("detalleVentaDiv")){
-    contenedor.parentNode.appendChild(detalle)
-  }
-
-  let imgHTML=""
-  if(v.img) imgHTML=`<img src="${v.img}" style="max-width:200px;margin-top:10px">`
-
-  const fecha=v.fecha?.seconds
-    ? new Date(v.fecha.seconds*1000)
-    : new Date(v.fecha || Date.now())
-
-  detalle.innerHTML=`
-    <h3>Detalle de Venta</h3>
-    <b>Cliente:</b> ${v.cliente || "-"}<br>
-    <b>Descripción:</b> ${v.desc || "-"}<br>
-    <b>Total:</b> $ ${( +v.total || 0).toFixed(2)}<br>
-    <b>Fecha:</b> ${fecha.toLocaleDateString()}<br>
-    <b>Estado:</b> ${v.pagado ? "Pagado" : "Pendiente"}<br>
-    <b>Observaciones:</b> ${v.obs || "-"}<br>
-    ${imgHTML}
-  `
-}
-
-// ===== FIN MEJORAS =====
-
-  
 </script>
 
 </body>
 </html>
-
