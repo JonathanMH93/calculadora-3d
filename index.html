@@ -406,6 +406,100 @@ function verVentaDetalle(v){
 INICIO
 ============================= */
 
+/* =============================
+GUARDAR COTIZACION
+============================= */
+
+async function guardarCot(){
+
+  if(typeof db==="undefined"){
+    alert("Firebase no conectado")
+    return
+  }
+
+  try{
+
+    const desc=document.getElementById("figura")?.value || ""
+    const total=+document.getElementById("precio")?.value || 0
+    const obs=document.getElementById("obs")?.value || ""
+    const link=document.getElementById("link")?.value || ""
+
+    const data={
+      desc,
+      total,
+      obs,
+      link,
+      fecha:new Date()
+    }
+
+    if(editandoCotId){
+
+      await updateDoc(doc(db,"cotizaciones",editandoCotId),data)
+      editandoCotId=null
+
+    }else{
+
+      await addDoc(collection(db,"cotizaciones"),data)
+
+    }
+
+    toast("Cotización guardada")
+
+    cargarCot()
+
+  }catch(e){
+    console.error("Error guardarCot",e)
+    alert("Error guardando cotización")
+  }
+}
+
+/* =============================
+GUARDAR VENTA
+============================= */
+
+async function guardarVenta(){
+
+  if(typeof db==="undefined"){
+    alert("Firebase no conectado")
+    return
+  }
+
+  try{
+
+    const cliente=document.getElementById("ventaCliente")?.value || ""
+    const desc=document.getElementById("ventaDesc")?.value || ""
+    const total=+document.getElementById("ventaTotal")?.value || 0
+    const obs=document.getElementById("ventaObs")?.value || ""
+
+    const fechaInput=document.getElementById("ventaFecha")?.value
+
+    const fecha=fechaInput
+      ? new Date(fechaInput)
+      : new Date()
+
+    const pagado=document.getElementById("ventaPagado")?.checked || false
+
+    const data={
+      cliente,
+      desc,
+      total,
+      obs,
+      fecha,
+      pagado
+    }
+
+    await addDoc(collection(db,"ventas"),data)
+
+    toast("Venta guardada")
+
+    cargarVentas()
+
+  }catch(e){
+    console.error("Error guardarVenta",e)
+    alert("Error guardando venta")
+  }
+}
+
 window.addEventListener("load",()=>{
 
   console.log("App lista")
