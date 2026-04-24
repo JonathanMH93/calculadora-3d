@@ -555,6 +555,107 @@ function verVentaDetalle(v){
 
 // ===== FIN MEJORAS =====
 
+
+// ===== MEJORAS VENTAS v2 =====
+
+function formatearFechaInput(fecha){
+  try{
+    const d=new Date(fecha)
+    return d.toISOString().split('T')[0]
+  }catch{
+    return ''
+  }
+}
+
+// Sobrescribe renderVentas con resumen y detalle
+async function renderVentas(lista){
+
+  const ventasDiv=document.getElementById("ventasDiv")
+  const resumenDiv=document.getElementById("resumenVentas") || document.createElement("div")
+  resumenDiv.id="resumenVentas"
+  resumenDiv.style.marginBottom="10px"
+  resumenDiv.style.fontWeight="bold"
+
+  if(ventasDiv && !document.getElementById("resumenVentas")){
+    ventasDiv.parentNode.insertBefore(resumenDiv, ventasDiv)
+  }
+
+  if(!ventasDiv) return
+
+  ventasDiv.innerHTML=""
+
+  let total=0
+  let pagado=0
+  let pendiente=0
+
+  lista.forEach(v=>{
+
+    const monto=+v.total || 0
+
+    total+=monto
+
+    if(v.pagado) pagado+=monto
+    else pendiente+=monto
+
+    const card=document.createElement("div")
+    card.className="card"
+
+    card.onclick=()=>verVentaDetalle(v)
+
+    const fecha=v.fecha?.seconds
+      ? new Date(v.fecha.seconds*1000)
+      : new Date(v.fecha || Date.now())
+
+    card.innerHTML=`
+      <div><b>${v.cliente || "Cliente"}</b></div>
+      <div>$ ${monto.toFixed(2)}</div>
+      <div>${fecha.toLocaleDateString()}</div>
+      <div>${v.pagado ? "✔ Pagado" : "Pendiente"}</div>
+    `
+
+    ventasDiv.appendChild(card)
+
+  })
+
+  resumenDiv.innerHTML=`
+    Total ventas: $ ${total.toFixed(2)} | 
+    Pagado: $ ${pagado.toFixed(2)} | 
+    Pendiente: $ ${pendiente.toFixed(2)}
+  `
+}
+
+function verVentaDetalle(v){
+
+  const detalle=document.getElementById("detalleVentaDiv") || document.createElement("div")
+  detalle.id="detalleVentaDiv"
+  detalle.style.marginTop="10px"
+
+  const contenedor=document.getElementById("ventasDiv")
+  if(contenedor && !document.getElementById("detalleVentaDiv")){
+    contenedor.parentNode.appendChild(detalle)
+  }
+
+  let imgHTML=""
+  if(v.img) imgHTML=`<img src="${v.img}" style="max-width:200px;margin-top:10px">`
+
+  const fecha=v.fecha?.seconds
+    ? new Date(v.fecha.seconds*1000)
+    : new Date(v.fecha || Date.now())
+
+  detalle.innerHTML=`
+    <h3>Detalle de Venta</h3>
+    <b>Cliente:</b> ${v.cliente || "-"}<br>
+    <b>Descripción:</b> ${v.desc || "-"}<br>
+    <b>Total:</b> $ ${( +v.total || 0).toFixed(2)}<br>
+    <b>Fecha:</b> ${fecha.toLocaleDateString()}<br>
+    <b>Estado:</b> ${v.pagado ? "Pagado" : "Pendiente"}<br>
+    <b>Observaciones:</b> ${v.obs || "-"}<br>
+    ${imgHTML}
+  `
+}
+
+// ===== FIN MEJORAS =====
+
 </script>
 
 </body>
