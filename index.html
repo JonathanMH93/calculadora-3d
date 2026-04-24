@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>3D App</title>
+<title>3D App PRO</title>
 
 <style>
 *{box-sizing:border-box}
@@ -15,6 +15,7 @@ body{font-family:Arial;background:#0f172a;color:#fff;margin:0}
 .card{background:#1e293b;padding:15px;margin-bottom:10px;border-radius:12px}
 input,textarea{width:100%;padding:12px;margin:6px 0;background:#334155;color:#fff;border:none;border-radius:8px}
 button{padding:10px;margin-top:8px;background:#2563eb;color:#fff;border:none;border-radius:8px;cursor:pointer}
+button.danger{background:#dc2626}
 .line{display:flex;justify-content:space-between;align-items:center}
 .total{font-size:22px;color:#22c55e}
 img{max-width:150px;border-radius:8px;margin-top:10px}
@@ -79,7 +80,10 @@ img{max-width:150px;border-radius:8px;margin-top:10px}
 
 <!-- VENTAS -->
 <div id="sales" style="display:none">
+
 <div class="card">
+
+<input type="hidden" id="ventaId">
 
 <label>Cliente</label>
 <input id="cliente">
@@ -94,9 +98,13 @@ img{max-width:150px;border-radius:8px;margin-top:10px}
 <input type="checkbox" id="pagado">
 
 <button onclick="guardarVenta()">Guardar venta</button>
+<button onclick="limpiarVenta()">Cancelar</button>
+
 </div>
 
 <div id="listaVentas"></div>
+<div id="detalleVenta"></div>
+
 </div>
 
 <!-- CONFIG -->
@@ -155,6 +163,7 @@ window.updateDoc=updateDoc;
 let configData={costoKg:20,extraFil:20,extraTime:10,costoHora:0.23,costoEnergia:0.2}
 let ultima={}
 let cotizacionesCache=[]
+let ventasCache=[]
 
 // CONFIG
 async function cargarConfig(){
@@ -246,10 +255,10 @@ total:Number(ultima.total.toFixed(2))
 
 if(cotId.value){
 await updateDoc(doc(db,"cotizaciones",cotId.value),data)
-alert("Actualizado")
+alert("Cotización actualizada")
 }else{
 await addDoc(collection(db,"cotizaciones"),data)
-alert("Guardado")
+alert("Cotización guardada")
 }
 
 limpiarCot()
@@ -317,7 +326,7 @@ mostrar("quotes",document.querySelectorAll(".tab")[1])
 }
 
 async function eliminarCot(id){
-if(!confirm("Eliminar?")) return
+if(!confirm("Eliminar cotización?")) return
 await deleteDoc(doc(db,"cotizaciones",id))
 cargarCot()
 }
@@ -335,32 +344,114 @@ figura.value=c.desc
 
 // ===== VENTAS =====
 
+function limpiarVenta(){
+ventaId.value=""
+cliente.value=""
+precio.value=""
+figura.value=""
+pagado.checked=false
+}
+
 async function guardarVenta(){
-await addDoc(collection(db,"ventas"),{
+
+if(!cliente.value) return alert("Cliente requerido")
+
+let data={
 cliente:cliente.value,
-precio:+precio.value||0,
+precio:Number((+precio.value||0).toFixed(2)),
 figura:figura.value,
 pagado:pagado.checked
-})
+}
+
+if(ventaId.value){
+await updateDoc(doc(db,"ventas",ventaId.value),data)
+alert("Venta actualizada")
+}else{
+await addDoc(collection(db,"ventas"),data)
 alert("Venta guardada")
+}
+
+limpiarVenta()
 cargarVentas()
 }
 
 async function cargarVentas(){
+
 let snap=await getDocs(collection(db,"ventas"))
+ventasCache=[]
 let html=""
 
 snap.forEach(d=>{
-let v=d.data()
+let v={id:d.id,...d.data()}
+ventasCache.push(v)
 
 html+=`
-<div class="card">
-<b>${v.cliente}</b> - $${Number(v.precio).toFixed(2)}<br>
-${v.figura}
+<div class="card line" onclick="verDetalleVenta('${v.id}')">
+
+<div>
+<b>${v.cliente}</b><br>
+$${Number(v.precio).toFixed(2)}<br>
+<span style="color:${v.pagado?"#22c55e":"#ef4444"}">
+${v.pagado?"Pagado":"Pendiente"}
+</span>
+</div>
+
+<div>
+<button onclick="event.stopPropagation(); editarVenta('${v.id}')">✏️</button>
+<button onclick="event.stopPropagation(); togglePagado('${v.id}')">✔</button>
+<button onclick="event.stopPropagation(); eliminarVenta('${v.id}')">🗑</button>
+</div>
+
 </div>`
 })
 
 listaVentas.innerHTML=html
+}
+
+function verDetalleVenta(id){
+
+let v=ventasCache.find(x=>x.id==id)
+
+detalleVenta.innerHTML=`
+<div class="card">
+<h3>${v.figura}</h3>
+
+<b>Cliente:</b> ${v.cliente}<br>
+<b>Precio:</b> $${Number(v.precio).toFixed(2)}<br>
+<b>Estado:</b> ${v.pagado?"Pagado":"Pendiente"}
+
+</div>
+`
+}
+
+function editarVenta(id){
+
+let v=ventasCache.find(x=>x.id==id)
+
+ventaId.value=v.id
+cliente.value=v.cliente
+precio.value=v.precio
+figura.value=v.figura
+pagado.checked=v.pagado
+
+mostrar("sales",document.querySelectorAll(".tab")[2])
+}
+
+async function togglePagado(id){
+
+let v=ventasCache.find(x=>x.id==id)
+
+await updateDoc(doc(db,"ventas",id),{
+pagado: !v.pagado
+})
+
+cargarVentas()
+}
+
+async function eliminarVenta(id){
+if(!confirm("Eliminar venta?")) return
+await deleteDoc(doc(db,"ventas",id))
+cargarVentas()
 }
 
 // UI
