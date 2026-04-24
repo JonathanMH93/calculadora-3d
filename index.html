@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>3D App</title>
+<title>3D App Estable</title>
 
 <style>
 *{box-sizing:border-box}
 body{font-family:Arial;background:#0f172a;color:#fff;margin:0}
-.container{max-width:900px;margin:auto;padding:20px}
+.container{max-width:1000px;margin:auto;padding:20px}
 .tabs{display:flex;gap:5px;margin-bottom:15px}
 .tab{flex:1;padding:12px;background:#334155;cursor:pointer;text-align:center;border-radius:8px}
 .active{background:#2563eb}
@@ -28,13 +28,13 @@ button{padding:10px;margin-top:8px;background:#2563eb;color:#fff;border:none;bor
 <div class="tab active" onclick="mostrar('calc',this)">💰 Calcular</div>
 <div class="tab" onclick="mostrar('quotes',this)">📦 Cotizaciones</div>
 <div class="tab" onclick="mostrar('sales',this)">💵 Ventas</div>
-<div class="tab" onclick="mostrar('config',this)">⚙️ Config</div>
+<div class="tab" onclick="mostrar('configTab',this)">⚙️ Config</div>
 </div>
 
 <!-- CALC -->
 <div id="calc">
 <div class="card">
-<label>Filamento</label>
+<label>Filamento (g)</label>
 <input id="fil" type="number">
 <label>Horas</label>
 <input id="h" type="number">
@@ -82,7 +82,7 @@ button{padding:10px;margin-top:8px;background:#2563eb;color:#fff;border:none;bor
 </div>
 
 <!-- CONFIG -->
-<div id="config" style="display:none">
+<div id="configTab" style="display:none">
 <div class="card">
 
 <label>Costo kg</label>
@@ -133,7 +133,7 @@ window.getDoc=getDoc;
 
 <script>
 
-let config={costoKg:20,extraFil:20,extraTime:10,costoHora:0.23,costoEnergia:0.2}
+let configData={costoKg:20,extraFil:20,extraTime:10,costoHora:0.23,costoEnergia:0.2}
 let ultima={}
 let cotizacionesCache=[]
 
@@ -142,26 +142,26 @@ async function cargarConfig(){
 let ref=doc(db,"config","default")
 let snap=await getDoc(ref)
 
-if(snap.exists()) config=snap.data()
-else await setDoc(ref,config)
+if(snap.exists()) configData=snap.data()
+else await setDoc(ref,configData)
 
-costoKg.value=config.costoKg
-extraFil.value=config.extraFil
-extraTime.value=config.extraTime
-costoHora.value=config.costoHora
-costoEnergia.value=config.costoEnergia
+costoKg.value=configData.costoKg
+extraFil.value=configData.extraFil
+extraTime.value=configData.extraTime
+costoHora.value=configData.costoHora
+costoEnergia.value=configData.costoEnergia
 }
 
 async function guardarConfig(){
-config={
+configData={
 costoKg:+costoKg.value||0,
 extraFil:+extraFil.value||0,
 extraTime:+extraTime.value||0,
 costoHora:+costoHora.value||0,
 costoEnergia:+costoEnergia.value||0
 }
-await setDoc(doc(db,"config","default"),config)
-alert("Guardado")
+await setDoc(doc(db,"config","default"),configData)
+alert("Configuración guardada")
 }
 
 // CALC
@@ -170,8 +170,8 @@ let f=+fil.value||0
 let h1=+h.value||0
 let m1=+m.value||0
 
-let total=((f*(1+config.extraFil/100)/1000)*config.costoKg)+
-((h1+m1/60)*(1+config.extraTime/100)*(config.costoHora+config.costoEnergia))
+let total=((f*(1+configData.extraFil/100)/1000)*configData.costoKg)+
+((h1+m1/60)*(1+configData.extraTime/100)*(configData.costoHora+configData.costoEnergia))
 
 total*=1.6
 
@@ -241,7 +241,7 @@ precio:+precio.value||0,
 figura:figura.value,
 pagado:pagado.checked
 })
-alert("Guardado")
+alert("Venta guardada")
 cargarVentas()
 }
 
@@ -265,10 +265,10 @@ listaVentas.innerHTML=html
 // UI
 function mostrar(tab,el){
 
-calc.style.display="none"
-quotes.style.display="none"
-sales.style.display="none"
-config.style.display="none"
+document.getElementById("calc").style.display="none"
+document.getElementById("quotes").style.display="none"
+document.getElementById("sales").style.display="none"
+document.getElementById("configTab").style.display="none"
 
 document.getElementById(tab).style.display="block"
 
@@ -277,7 +277,7 @@ el.classList.add("active")
 
 if(tab=="quotes") cargarCot()
 if(tab=="sales") cargarVentas()
-if(tab=="config") cargarConfig()
+if(tab=="configTab") cargarConfig()
 }
 
 window.onload=()=>{
