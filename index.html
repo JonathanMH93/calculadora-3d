@@ -3,27 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>3D App PRO</title>
+<title>3D App</title>
 
 <style>
 *{box-sizing:border-box}
 body{font-family:Arial;background:#0f172a;color:#fff;margin:0}
-.container{max-width:1100px;margin:auto;padding:20px}
+.container{max-width:900px;margin:auto;padding:20px}
 .tabs{display:flex;gap:5px;margin-bottom:15px}
 .tab{flex:1;padding:12px;background:#334155;cursor:pointer;text-align:center;border-radius:8px}
 .active{background:#2563eb}
 .card{background:#1e293b;padding:15px;margin-bottom:10px;border-radius:12px}
 input,textarea{width:100%;padding:12px;margin:6px 0;background:#334155;color:#fff;border:none;border-radius:8px}
-label{font-size:13px;color:#94a3b8;display:block;margin-top:8px}
-button{padding:10px;margin:3px;background:#2563eb;color:#fff;border:none;border-radius:8px;cursor:pointer}
-button.danger{background:#dc2626}
-button.gray{background:#64748b}
+button{padding:10px;margin-top:8px;background:#2563eb;color:#fff;border:none;border-radius:8px;cursor:pointer}
 .line{display:flex;justify-content:space-between;align-items:center}
 .total{font-size:22px;color:#22c55e}
-.toast{position:fixed;bottom:20px;right:20px;background:#16a34a;padding:12px 18px;border-radius:10px;display:none}
-.badge{padding:4px 8px;border-radius:6px;font-size:12px}
-.pagado{background:#16a34a}
-.pendiente{background:#dc2626}
 </style>
 </head>
 
@@ -32,7 +25,7 @@ button.gray{background:#64748b}
 <div class="container">
 
 <div class="tabs">
-<div class="tab active" onclick="mostrar('calc',this)">💵 Calcular</div>
+<div class="tab active" onclick="mostrar('calc',this)">💰 Calcular</div>
 <div class="tab" onclick="mostrar('quotes',this)">📦 Cotizaciones</div>
 <div class="tab" onclick="mostrar('sales',this)">💵 Ventas</div>
 <div class="tab" onclick="mostrar('config',this)">⚙️ Config</div>
@@ -41,7 +34,7 @@ button.gray{background:#64748b}
 <!-- CALC -->
 <div id="calc">
 <div class="card">
-<label>Filamento (g)</label>
+<label>Filamento</label>
 <input id="fil" type="number">
 <label>Horas</label>
 <input id="h" type="number">
@@ -51,71 +44,41 @@ button.gray{background:#64748b}
 
 <button onclick="calcular()">Calcular</button>
 
-<div class="card total"><span id="total">$ 0.00</span></div>
+<div class="card total">$ <span id="total">0</span></div>
 
-<button id="btnCot" style="display:none" onclick="irCot()">📌 Cotizar</button>
+<button id="btnCot" style="display:none" onclick="irCot()">Cotizar</button>
 </div>
 
 <!-- COT -->
 <div id="quotes" style="display:none">
-
 <div class="card">
-<input type="hidden" id="cotId">
-
 <label>Descripción</label>
-<textarea id="desc"></textarea>
-
-<label>Enlace</label>
-<input id="link">
-
-<label>Foto</label>
-<input type="file" id="foto">
-
-<label>Observaciones</label>
-<textarea id="obs"></textarea>
-
+<input id="desc">
 <button onclick="guardarCot()">Guardar</button>
-<button class="gray" onclick="limpiarCot()">Cancelar</button>
 </div>
 
 <div id="listaCot"></div>
-<div id="detalleCot"></div>
-
 </div>
 
 <!-- VENTAS -->
 <div id="sales" style="display:none">
-
 <div class="card">
-<input type="hidden" id="ventaId">
-
 <label>Cliente</label>
 <input id="cliente">
 
 <label>Precio</label>
-<input id="precio" type="number">
+<input id="precio">
 
 <label>Figura</label>
 <input id="figura">
 
-<label>Fecha</label>
-<input type="date" id="fechaVenta">
-
-<input type="checkbox" id="pagado"> Pagado
+<label>Pagado</label>
+<input type="checkbox" id="pagado">
 
 <button onclick="guardarVenta()">Guardar venta</button>
-<button class="gray" onclick="limpiarVenta()">Cancelar</button>
 </div>
 
-<div style="margin-bottom:10px">
-<button onclick="setFiltro('all')">Todos</button>
-<button onclick="setFiltro('pagado')">Pagados</button>
-<button onclick="setFiltro('pendiente')">Pendientes</button>
-</div>
-
-<div id="resumenVentas"></div>
 <div id="listaVentas"></div>
-
 </div>
 
 <!-- CONFIG -->
@@ -144,12 +107,10 @@ button.gray{background:#64748b}
 
 </div>
 
-<div id="toast" class="toast"></div>
-
 <!-- FIREBASE -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
 apiKey:"AIzaSyClTMXXUlDDK0txPwr1Q5SFYkytC9RQvGA",
@@ -166,10 +127,8 @@ window.addDoc=addDoc;
 window.getDocs=getDocs;
 window.deleteDoc=deleteDoc;
 window.doc=doc;
-window.updateDoc=updateDoc;
-window.getDoc=getDoc;
 window.setDoc=setDoc;
-window.serverTimestamp=serverTimestamp;
+window.getDoc=getDoc;
 </script>
 
 <script>
@@ -177,19 +136,6 @@ window.serverTimestamp=serverTimestamp;
 let config={costoKg:20,extraFil:20,extraTime:10,costoHora:0.23,costoEnergia:0.2}
 let ultima={}
 let cotizacionesCache=[]
-let ventasCache=[]
-let filtroVentas="all"
-
-function toast(msg){
-let t=document.getElementById("toast")
-t.innerText=msg
-t.style.display="block"
-setTimeout(()=>t.style.display="none",2000)
-}
-
-function money(n){
-return Number(n||0).toLocaleString("es-EC",{style:"currency",currency:"USD"})
-}
 
 // CONFIG
 async function cargarConfig(){
@@ -215,7 +161,7 @@ costoHora:+costoHora.value||0,
 costoEnergia:+costoEnergia.value||0
 }
 await setDoc(doc(db,"config","default"),config)
-toast("Configuración guardada")
+alert("Guardado")
 }
 
 // CALC
@@ -229,7 +175,7 @@ let total=((f*(1+config.extraFil/100)/1000)*config.costoKg)+
 
 total*=1.6
 
-totalSpan.innerText=money(total)
+document.getElementById("total").innerText=total.toFixed(2)
 
 ultima={f,h:h1,m:m1,total}
 
@@ -244,8 +190,7 @@ mostrar("quotes",document.querySelectorAll(".tab")[1])
 async function guardarCot(){
 await addDoc(collection(db,"cotizaciones"),{
 ...ultima,
-desc:desc.value,
-fecha:serverTimestamp()
+desc:desc.value
 })
 cargarCot()
 }
@@ -261,7 +206,7 @@ cotizacionesCache.push(c)
 
 html+=`
 <div class="card line">
-<div>${c.desc} - ${money(c.total)}</div>
+<div>${c.desc} - $${c.total}</div>
 <div>
 <button onclick="crearVenta('${c.id}')">💵</button>
 <button onclick="eliminarCot('${c.id}')">🗑</button>
@@ -285,78 +230,36 @@ mostrar("sales",document.querySelectorAll(".tab")[2])
 setTimeout(()=>{
 precio.value=c.total
 figura.value=c.desc
-fechaVenta.value=new Date().toISOString().split("T")[0]
 },50)
 }
 
 // VENTAS
-function setFiltro(f){
-filtroVentas=f
-cargarVentas()
-}
-
 async function guardarVenta(){
-
-let fechaVal = fechaVenta.value 
-? new Date(fechaVenta.value)
-: new Date()
-
 await addDoc(collection(db,"ventas"),{
 cliente:cliente.value,
 precio:+precio.value||0,
 figura:figura.value,
-pagado:pagado.checked,
-fecha:fechaVal
+pagado:pagado.checked
 })
-
-toast("Venta guardada")
+alert("Guardado")
 cargarVentas()
 }
 
 async function cargarVentas(){
-
 let snap=await getDocs(collection(db,"ventas"))
-
 let html=""
-let total=0,pag=0,pend=0
 
 snap.forEach(d=>{
-
 let v=d.data()
 
-if(filtroVentas==="pagado" && !v.pagado) return
-if(filtroVentas==="pendiente" && v.pagado) return
-
-let precio=+v.precio||0
-
-total+=precio
-if(v.pagado) pag+=precio
-else pend+=precio
-
-let fecha=v.fecha?.seconds
-? new Date(v.fecha.seconds*1000)
-: new Date()
-
 html+=`
-<div class="card line">
-<div>
-<b>${v.figura}</b><br>
-${money(precio)}<br>
-${fecha.toLocaleDateString()}<br>
-<span class="badge ${v.pagado?"pagado":"pendiente"}">
-${v.pagado?"Pagado":"Pendiente"}
-</span>
-</div>
+<div class="card">
+<b>${v.cliente}</b> - $${v.precio}<br>
+${v.figura}
 </div>`
 })
 
 listaVentas.innerHTML=html
-
-resumenVentas.innerHTML=`
-💰 Total: ${money(total)} |
-✅ Pagado: ${money(pag)} |
-⏳ Pendiente: ${money(pend)}
-`
 }
 
 // UI
@@ -375,6 +278,10 @@ el.classList.add("active")
 if(tab=="quotes") cargarCot()
 if(tab=="sales") cargarVentas()
 if(tab=="config") cargarConfig()
+}
+
+window.onload=()=>{
+mostrar("calc",document.querySelectorAll(".tab")[0])
 }
 
 </script>
