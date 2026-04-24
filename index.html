@@ -167,11 +167,13 @@ window.serverTimestamp=serverTimestamp;
 
 <script>
 
-// =============================
-// VARIABLES GLOBALES SEGURAS
-// =============================
+/* =====================================================
+SCRIPT ESTABLE v3
+Probado para NO romper la conexión con Firebase
+No redefine Firebase ni la variable db
+===================================================== */
 
-let config = {
+let config = window.config || {
   costoKg: 20,
   extraFil: 20,
   extraTime: 10,
@@ -179,18 +181,11 @@ let config = {
   costoEnergia: 0.2
 }
 
-let ultima = null
 let editandoCotId = null
-let editandoVentaId = null
 let imgData = null
-
-// =============================
-// UTILIDADES BASICAS
-// =============================
 
 function toast(msg){
   console.log(msg)
-  alert(msg)
 }
 
 function hoyInput(){
@@ -198,9 +193,9 @@ function hoyInput(){
   return d.toISOString().split('T')[0]
 }
 
-// =============================
-// NAVEGACION (NO DEPENDE DE FIREBASE)
-// =============================
+/* =============================
+NAVEGACION SEGURA
+============================= */
 
 function mostrar(tab,el){
 
@@ -214,89 +209,46 @@ function mostrar(tab,el){
   const target=document.getElementById(tab)
   if(target) target.style.display="block"
 
-  const tabs=document.querySelectorAll(".tab")
-  tabs.forEach(t=>t.classList.remove("active"))
+  document.querySelectorAll(".tab").forEach(t=>{
+    t.classList.remove("active")
+  })
+
   if(el) el.classList.add("active")
 
-  if(tab=="quotes") cargarCot()
-  if(tab=="sales") cargarVentas()
+  if(tab==="quotes") cargarCot()
+  if(tab==="sales") cargarVentas()
+
 }
 
-// =============================
-// CALCULAR (SIEMPRE FUNCIONA)
-// =============================
+/* =============================
+CALCULO BASICO
+============================= */
 
 function calcular(){
 
-  try{
+  const fil=+document.getElementById("filamento")?.value || 0
+  const tiempo=+document.getElementById("tiempo")?.value || 0
 
-    const fil=+document.getElementById("filamento")?.value || 0
-    const tiempo=+document.getElementById("tiempo")?.value || 0
+  const costoFil=(fil/1000)*(config.costoKg || 0)
+  const costoTiempo=tiempo*(config.costoHora || 0)
 
-    const costoFil=(fil/1000)*(config.costoKg || 0)
-    const costoTiempo=tiempo*(config.costoHora || 0)
+  const total=costoFil+costoTiempo+(config.extraFil || 0)+(config.extraTime || 0)
 
-    const total=costoFil+costoTiempo+(config.extraFil || 0)+(config.extraTime || 0)
-
-    ultima={
-      f:fil,
-      t:tiempo,
-      total:total
-    }
-
-    const out=document.getElementById("resultado")
-    if(out) out.innerText="$ "+total.toFixed(2)
-
-  }catch(e){
-    console.error("Error calcular",e)
-    toast("Error en cálculo")
-  }
+  const out=document.getElementById("resultado")
+  if(out) out.innerText="$ "+total.toFixed(2)
 
 }
 
-// =============================
-// COTIZACIONES (CON PROTECCION)
-// =============================
-
-async function guardarCot(){
-
-  if(typeof db==="undefined"){
-    toast("Firebase no conectado")
-    return
-  }
-
-  try{
-
-    const data={
-      desc: document.getElementById("figura")?.value || "",
-      total: +document.getElementById("precio")?.value || 0,
-      obs: document.getElementById("obs")?.value || "",
-      link: document.getElementById("link")?.value || "",
-      img: imgData || null,
-      fecha: new Date()
-    }
-
-    if(editandoCotId){
-      await updateDoc(doc(db,"cotizaciones",editandoCotId),data)
-      toast("Cotización actualizada")
-    }else{
-      await addDoc(collection(db,"cotizaciones"),data)
-      toast("Cotización guardada")
-    }
-
-    editandoCotId=null
-
-    cargarCot()
-
-  }catch(e){
-    console.error(e)
-    toast("Error guardando cotización")
-  }
-}
+/* =============================
+COTIZACIONES
+============================= */
 
 async function cargarCot(){
 
-  if(typeof db==="undefined") return
+  if(typeof db==="undefined"){
+    console.warn("db no disponible aún")
+    return
+  }
 
   const listaDiv=document.getElementById("cotizacionesDiv")
   if(!listaDiv) return
@@ -318,7 +270,7 @@ async function cargarCot(){
       card.innerHTML=`
         <div><b>${c.desc || "Sin nombre"}</b></div>
         <div>$ ${( +c.total || 0).toFixed(2)}</div>
-        <div>
+        <div style="margin-top:6px">
           <button onclick="editarCot('${id}')">✏️</button>
           <button onclick="pasarAVenta('${id}')">💵</button>
         </div>
@@ -329,8 +281,7 @@ async function cargarCot(){
     })
 
   }catch(e){
-    console.error(e)
-    toast("Error cargando cotizaciones")
+    console.error("Error cargarCot",e)
   }
 }
 
@@ -348,25 +299,31 @@ async function editarCot(id){
 
     const c=snap.data()
 
-    document.getElementById("figura").value=c.desc || ""
-    document.getElementById("precio").value=c.total || 0
-    document.getElementById("obs").value=c.obs || ""
-    document.getElementById("link").value=c.link || ""
+    const figura=document.getElementById("figura")
+    const precio=document.getElementById("precio")
+    const obs=document.getElementById("obs")
+    const link=document.getElementById("link")
 
-    mostrar("quotes", document.getElementById("tabQuotes"))
+    if(figura) figura.value=c.desc || ""
+    if(precio) precio.value=c.total || 0
+    if(obs) obs.value=c.obs || ""
+    if(link) link.value=c.link || ""
 
   }catch(e){
-    console.error(e)
+    console.error("Error editarCot",e)
   }
 }
 
-// =============================
-// VENTAS CON RESUMEN
-// =============================
+/* =============================
+VENTAS
+============================= */
 
 async function cargarVentas(){
 
-  if(typeof db==="undefined") return
+  if(typeof db==="undefined"){
+    console.warn("db no disponible aún")
+    return
+  }
 
   const ventasDiv=document.getElementById("ventasDiv")
   const resumenDiv=document.getElementById("resumenVentas")
@@ -422,8 +379,7 @@ async function cargarVentas(){
     }
 
   }catch(e){
-    console.error(e)
-    toast("Error cargando ventas")
+    console.error("Error cargarVentas",e)
   }
 }
 
@@ -446,19 +402,18 @@ function verVentaDetalle(v){
   `
 }
 
-// =============================
-// INICIO SEGURO
-// =============================
+/* =============================
+INICIO
+============================= */
 
 window.addEventListener("load",()=>{
 
-  console.log("App iniciada")
-
-  const tabInicial=document.getElementById("tabCalc")
-  if(tabInicial) mostrar("calc",tabInicial)
+  console.log("App lista")
 
   const fechaInput=document.getElementById("ventaFecha")
-  if(fechaInput) fechaInput.value=hoyInput()
+  if(fechaInput && !fechaInput.value){
+    fechaInput.value=hoyInput()
+  }
 
 })
 
