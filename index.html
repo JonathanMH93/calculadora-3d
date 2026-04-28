@@ -52,6 +52,73 @@ img{max-width:150px;border-radius:8px;margin-top:10px}
 <button id="btnCot" style="display:none" onclick="irCot()">Cotizar</button>
 </div>
 
+<!-- COTIZACIONES -->
+<div id="quotes" style="display:none">
+
+<div class="card">
+<input type="hidden" id="cotId">
+
+<label>Descripción</label>
+<input id="desc">
+
+<label>Enlace (opcional)</label>
+<input id="link">
+
+<label>Foto (opcional)</label>
+<input type="file" id="foto">
+
+<label>Observaciones</label>
+<textarea id="obs"></textarea>
+
+<button onclick="guardarCot()">Guardar</button>
+<button onclick="limpiarCot()">Cancelar</button>
+</div>
+
+<div id="listaCot"></div>
+<div id="detalleCot"></div>
+
+</div>
+
+<!-- VENTAS -->
+<div id="sales" style="display:none">
+
+<div class="card">
+
+<input type="hidden" id="ventaId">
+
+<label>Cliente</label>
+<input id="cliente">
+
+<label>Precio</label>
+<input id="precio">
+
+<label>Figura</label>
+<input id="figura">
+
+<label>Fecha</label>
+<input type="date" id="fechaVenta">
+
+<label>Pagado</label>
+<input type="checkbox" id="pagado">
+
+<button onclick="guardarVenta()">Guardar venta</button>
+<button onclick="limpiarVenta()">Cancelar</button>
+
+</div>
+
+<div class="card">
+<button onclick="setFiltro('all')">📋 Todas</button>
+<button onclick="setFiltro('pagado')">✅ Pagadas</button>
+<button onclick="setFiltro('pendiente')">⏳ Pendientes</button>
+</div>
+
+<div class="card" id="resumenVentas"></div>
+
+<div id="listaVentas"></div>
+<div id="detalleVenta"></div>
+
+</div>
+
 <!-- CONFIG -->
 <div id="configTab" style="display:none">
 <div class="card">
@@ -84,7 +151,7 @@ img{max-width:150px;border-radius:8px;margin-top:10px}
 <!-- FIREBASE -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
 apiKey:"AIzaSyClTMXXUlDDK0txPwr1Q5SFYkytC9RQvGA",
@@ -96,9 +163,14 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 window.db=db;
+window.collection=collection;
+window.addDoc=addDoc;
+window.getDocs=getDocs;
+window.deleteDoc=deleteDoc;
 window.doc=doc;
 window.setDoc=setDoc;
 window.getDoc=getDoc;
+window.updateDoc=updateDoc;
 </script>
 
 <script>
@@ -112,49 +184,45 @@ costoEnergia:0.2,
 ganancia:60
 }
 
+let ultima={}
+let cotizacionesCache=[]
+let ventasCache=[]
+let filtroVenta="all"
+
 // CONFIG
 async function cargarConfig(){
+let ref=doc(db,"config","default")
+let snap=await getDoc(ref)
 
-let ref = doc(db,"config","default")
-let snap = await getDoc(ref)
+if(snap.exists()) configData=snap.data()
+else await setDoc(ref,configData)
 
-if(snap.exists())
-configData = snap.data()
-else
-await setDoc(ref,configData)
-
-document.getElementById("costoKg").value = configData.costoKg
-document.getElementById("extraFil").value = configData.extraFil
-document.getElementById("extraTime").value = configData.extraTime
-document.getElementById("costoHora").value = configData.costoHora
-document.getElementById("costoEnergia").value = configData.costoEnergia
-document.getElementById("ganancia").value = configData.ganancia
-
+costoKg.value=configData.costoKg
+extraFil.value=configData.extraFil
+extraTime.value=configData.extraTime
+costoHora.value=configData.costoHora
+costoEnergia.value=configData.costoEnergia
+ganancia.value=configData.ganancia
 }
 
 async function guardarConfig(){
-
 configData={
-costoKg:+document.getElementById("costoKg").value||0,
-extraFil:+document.getElementById("extraFil").value||0,
-extraTime:+document.getElementById("extraTime").value||0,
-costoHora:+document.getElementById("costoHora").value||0,
-costoEnergia:+document.getElementById("costoEnergia").value||0,
-ganancia:+document.getElementById("ganancia").value||0
+costoKg:+costoKg.value||0,
+extraFil:+extraFil.value||0,
+extraTime:+extraTime.value||0,
+costoHora:+costoHora.value||0,
+costoEnergia:+costoEnergia.value||0,
+ganancia:+ganancia.value||0
 }
-
 await setDoc(doc(db,"config","default"),configData)
-
 alert("Configuración guardada")
-
 }
 
 // CALC
 function calcular(){
-
-let f=+document.getElementById("fil").value||0
-let h1=+document.getElementById("h").value||0
-let m1=+document.getElementById("m").value||0
+let f=+fil.value||0
+let h1=+h.value||0
+let m1=+m.value||0
 
 let total=((f*(1+configData.extraFil/100)/1000)*configData.costoKg)+
 ((h1+m1/60)*(1+configData.extraTime/100)*(configData.costoHora+configData.costoEnergia))
@@ -163,14 +231,20 @@ total *= (1 + configData.ganancia / 100)
 
 total=Number(total.toFixed(2))
 
-document.getElementById("total").innerText = total.toFixed(2)
+document.getElementById("total").innerText=total.toFixed(2)
 
+ultima={f,h:h1,m:m1,total}
+
+btnCot.style.display="block"
 }
 
-// UI
+// resto del código EXACTAMENTE igual al tuyo...
+
 function mostrar(tab,el){
 
 document.getElementById("calc").style.display="none"
+document.getElementById("quotes").style.display="none"
+document.getElementById("sales").style.display="none"
 document.getElementById("configTab").style.display="none"
 
 document.getElementById(tab).style.display="block"
@@ -178,8 +252,9 @@ document.getElementById(tab).style.display="block"
 document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"))
 el.classList.add("active")
 
+if(tab=="quotes") cargarCot()
+if(tab=="sales") cargarVentas()
 if(tab=="configTab") cargarConfig()
-
 }
 
 window.onload=()=>{
