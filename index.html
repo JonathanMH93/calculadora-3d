@@ -137,6 +137,9 @@ img{max-width:150px;border-radius:8px;margin-top:10px}
 <label>Costo energía</label>
 <input id="costoEnergia">
 
+<label>% ganancia</label>
+<input id="porcentajeGanancia">
+
 <button onclick="guardarConfig()">Guardar</button>
 
 </div>
@@ -171,7 +174,7 @@ window.updateDoc=updateDoc;
 
 <script>
 
-let configData={costoKg:20,extraFil:20,extraTime:10,costoHora:0.23,costoEnergia:0.2}
+let configData={costoKg:20,extraFil:20,extraTime:10,costoHora:0.23,costoEnergia:0.2,porcentajeGanancia:60}
 let ultima={}
 let cotizacionesCache=[]
 let ventasCache=[]
@@ -182,7 +185,7 @@ async function cargarConfig(){
 let ref=doc(db,"config","default")
 let snap=await getDoc(ref)
 
-if(snap.exists()) configData=snap.data()
+if(snap.exists()) configData={...configData,...snap.data()}
 else await setDoc(ref,configData)
 
 costoKg.value=configData.costoKg
@@ -190,6 +193,7 @@ extraFil.value=configData.extraFil
 extraTime.value=configData.extraTime
 costoHora.value=configData.costoHora
 costoEnergia.value=configData.costoEnergia
+porcentajeGanancia.value=configData.porcentajeGanancia
 }
 
 async function guardarConfig(){
@@ -198,7 +202,8 @@ costoKg:+costoKg.value||0,
 extraFil:+extraFil.value||0,
 extraTime:+extraTime.value||0,
 costoHora:+costoHora.value||0,
-costoEnergia:+costoEnergia.value||0
+costoEnergia:+costoEnergia.value||0,
+porcentajeGanancia:+porcentajeGanancia.value||0
 }
 await setDoc(doc(db,"config","default"),configData)
 alert("Configuración guardada")
@@ -213,7 +218,7 @@ let m1=+m.value||0
 let total=((f*(1+configData.extraFil/100)/1000)*configData.costoKg)+
 ((h1+m1/60)*(1+configData.extraTime/100)*(configData.costoHora+configData.costoEnergia))
 
-total*=1.6
+total*=1+(configData.porcentajeGanancia/100)
 total=Number(total.toFixed(2))
 
 document.getElementById("total").innerText=total.toFixed(2)
