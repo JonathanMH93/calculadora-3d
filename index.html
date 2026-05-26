@@ -13,9 +13,21 @@
 <style>
 *{box-sizing:border-box}
 body{font-family:Arial;background:#0f172a;color:#fff;margin:0}
-.container{max-width:1100px;margin:auto;padding:20px}
-.tabs{display:flex;gap:5px;margin-bottom:15px}
-.tab{flex:1;padding:12px;background:#334155;cursor:pointer;text-align:center;border-radius:8px}
+.container{max-width:1400px;margin:auto;padding:20px}
+.tabs{display:flex;gap:5px;margin-bottom:15px;flex-wrap:wrap}
+.tab{flex:1;min-width:70px;padding:12px;background:#334155;cursor:pointer;text-align:center;border-radius:8px;font-size:13px}
+.portfolio-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:12px}
+.portfolio-card{background:#1e293b;border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
+.portfolio-card img{width:100%;aspect-ratio:1;object-fit:cover;display:block}
+.portfolio-body{padding:10px;flex:1}
+.portfolio-body h4{margin:0 0 6px;font-size:14px}
+.portfolio-body ul{margin:0;padding-left:16px;font-size:12px;color:#cbd5e1}
+.portfolio-actions{display:flex;gap:6px;padding:0 10px 10px}
+.portfolio-actions button{flex:1;margin:0;padding:8px;font-size:12px}
+.portfolio-preview{max-width:120px;border-radius:8px;margin-top:8px}
+@media(max-width:1100px){.portfolio-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:700px){.portfolio-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:420px){.portfolio-grid{grid-template-columns:1fr}}
 .active{background:#2563eb}
 .card{background:#1e293b;padding:15px;margin-bottom:10px;border-radius:12px}
 input,textarea{width:100%;padding:12px;margin:6px 0;background:#334155;color:#fff;border:none;border-radius:8px}
@@ -35,6 +47,7 @@ img{max-width:150px;border-radius:8px;margin-top:10px}
 <div class="tab active" onclick="mostrar('calc',this)">💰 Calcular</div>
 <div class="tab" onclick="mostrar('quotes',this)">📦 Cotizaciones</div>
 <div class="tab" onclick="mostrar('sales',this)">💵 Ventas</div>
+<div class="tab" onclick="mostrar('portfolio',this)">🖼 Portafolio</div>
 <div class="tab" onclick="mostrar('configTab',this)">⚙️ Config</div>
 </div>
 
@@ -123,6 +136,30 @@ img{max-width:150px;border-radius:8px;margin-top:10px}
 
 </div>
 
+<!-- PORTAFOLIO -->
+<div id="portfolio" style="display:none">
+
+<div class="card">
+<input type="hidden" id="portId">
+
+<label>Nombre</label>
+<input id="portNombre" placeholder="Ej: Figura Dragon Ball">
+
+<label>Imagen</label>
+<input type="file" id="portFoto" accept="image/*">
+<img id="portPreview" class="portfolio-preview" style="display:none">
+
+<label>Características principales (una por línea)</label>
+<textarea id="portCaracteristicas" placeholder="PLA multicolor&#10;15 cm de alto&#10;Tiempo: 8 h"></textarea>
+
+<button onclick="guardarPortafolio()">Guardar</button>
+<button onclick="limpiarPortafolio()">Cancelar</button>
+</div>
+
+<div id="listaPortafolio" class="portfolio-grid"></div>
+
+</div>
+
 <!-- CONFIG -->
 <div id="configTab" style="display:none">
 <div class="card">
@@ -183,6 +220,7 @@ let configData={costoKg:20,extraFil:20,extraTime:10,costoHora:0.23,costoEnergia:
 let ultima={}
 let cotizacionesCache=[]
 let ventasCache=[]
+let portafolioCache=[]
 let filtroVenta="all"
 
 // CONFIG
@@ -524,12 +562,129 @@ await deleteDoc(doc(db,"ventas",id))
 cargarVentas()
 }
 
+// ===== PORTAFOLIO =====
+
+function escapeHtml(s){
+return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")
+}
+
+function limpiarPortafolio(){
+portId.value=""
+portNombre.value=""
+portCaracteristicas.value=""
+portFoto.value=""
+portPreview.style.display="none"
+portPreview.src=""
+}
+
+function mostrarPreviewPort(src){
+if(!src){
+portPreview.style.display="none"
+portPreview.src=""
+return
+}
+portPreview.src=src
+portPreview.style.display="block"
+}
+
+portFoto.addEventListener("change",async()=>{
+if(!portFoto.files[0]) return
+mostrarPreviewPort(await fileToBase64(portFoto.files[0]))
+})
+
+async function guardarPortafolio(){
+
+if(!portNombre.value.trim()) return alert("Nombre requerido")
+
+let imgData=""
+if(portFoto.files[0]){
+imgData=await fileToBase64(portFoto.files[0])
+}else if(portId.value){
+let actual=portafolioCache.find(x=>x.id===portId.value)
+imgData=actual?.img||""
+}
+
+if(!imgData) return alert("Imagen requerida")
+
+let data={
+nombre:portNombre.value.trim(),
+caracteristicas:portCaracteristicas.value.trim(),
+img:imgData
+}
+
+if(portId.value){
+await updateDoc(doc(db,"portafolio",portId.value),data)
+alert("Pieza actualizada")
+}else{
+await addDoc(collection(db,"portafolio"),data)
+alert("Pieza guardada")
+}
+
+limpiarPortafolio()
+cargarPortafolio()
+}
+
+function renderCaracteristicas(texto){
+let items=String(texto||"").split("\n").map(l=>l.trim()).filter(Boolean)
+if(!items.length) return "<p style='margin:0;font-size:12px;color:#94a3b8'>Sin características</p>"
+return "<ul>"+items.map(i=>"<li>"+escapeHtml(i)+"</li>").join("")+"</ul>"
+}
+
+async function cargarPortafolio(){
+
+let snap=await getDocs(collection(db,"portafolio"))
+portafolioCache=[]
+
+let html=""
+
+snap.forEach(d=>{
+let p={id:d.id,...d.data()}
+portafolioCache.push(p)
+
+html+=`
+<div class="portfolio-card">
+<img src="${p.img}" alt="${escapeHtml(p.nombre)}">
+<div class="portfolio-body">
+<h4>${escapeHtml(p.nombre)}</h4>
+${renderCaracteristicas(p.caracteristicas)}
+</div>
+<div class="portfolio-actions">
+<button onclick="editarPortafolio('${p.id}')">✏️ Editar</button>
+<button class="danger" onclick="eliminarPortafolio('${p.id}')">🗑</button>
+</div>
+</div>`
+})
+
+listaPortafolio.innerHTML=html||"<p style='grid-column:1/-1;color:#94a3b8'>Aún no hay piezas en el portafolio.</p>"
+}
+
+function editarPortafolio(id){
+let p=portafolioCache.find(x=>x.id===id)
+if(!p) return
+
+portId.value=p.id
+portNombre.value=p.nombre||""
+portCaracteristicas.value=p.caracteristicas||""
+portFoto.value=""
+mostrarPreviewPort(p.img||"")
+
+mostrar("portfolio",document.querySelectorAll(".tab")[3])
+window.scrollTo({top:0,behavior:"smooth"})
+}
+
+async function eliminarPortafolio(id){
+if(!confirm("¿Eliminar esta pieza del portafolio?")) return
+await deleteDoc(doc(db,"portafolio",id))
+cargarPortafolio()
+}
+
 // UI
 function mostrar(tab,el){
 
 document.getElementById("calc").style.display="none"
 document.getElementById("quotes").style.display="none"
 document.getElementById("sales").style.display="none"
+document.getElementById("portfolio").style.display="none"
 document.getElementById("configTab").style.display="none"
 
 document.getElementById(tab).style.display="block"
@@ -539,6 +694,7 @@ el.classList.add("active")
 
 if(tab=="quotes") cargarCot()
 if(tab=="sales") cargarVentas()
+if(tab=="portfolio") cargarPortafolio()
 if(tab=="configTab") cargarConfig()
 }
 
