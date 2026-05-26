@@ -37,6 +37,7 @@ button.danger{background:#dc2626}
 .line{display:flex;justify-content:space-between;align-items:center}
 .total{font-size:22px;color:#22c55e}
 img{max-width:150px;border-radius:8px;margin-top:10px}
+.detalle-img,.portfolio-preview{max-width:100%;width:auto;height:auto;margin-top:10px;border-radius:8px;display:block}
 </style>
 </head>
 
@@ -83,7 +84,8 @@ img{max-width:150px;border-radius:8px;margin-top:10px}
 <input id="link">
 
 <label>Foto (opcional)</label>
-<input type="file" id="foto">
+<input type="file" id="foto" accept="image/*">
+<img id="cotPreview" class="detalle-img" style="display:none" alt="Vista previa">
 
 <label>Observaciones</label>
 <textarea id="obs"></textarea>
@@ -243,44 +245,84 @@ return e?.message||"Error desconocido al conectar con Firebase."
 }
 
 function esImagenValida(src){
-return typeof src==="string"&&src.startsWith("data:image/")&&src.length>100
+return typeof src==="string"&&src.startsWith("data:image/")&&src.length>500
 }
 
-function comprimirImagen(dataUrl,maxW=900,calidad=0.82){
-return new Promise((resolve,reject)=>{
+const LIMITE_IMG_FIRESTORE=900000
+
+async function archivoADataUrl(file){
+if(window.createImageBitmap){
+try{
+const bmp=await createImageBitmap(file,{imageOrientation:"from-image"})
+const canvas=document.createElement("canvas")
+canvas.width=bmp.width
+canvas.height=bmp.height
+canvas.getContext("2d").drawImage(bmp,0,0)
+if(bmp.close) bmp.close()
+const tipo=file.type==="image/png"?"image/png":"image/jpeg"
+return canvas.toDataURL(tipo,tipo==="image/png"?undefined:0.92)
+}catch(e){
+console.warn("createImageBitmap:",e)
+}
+}
+return fileToBase64(file)
+}
+
+async function redimensionarArchivo(file,maxW=1200,calidad=0.88){
+let fuente
+if(window.createImageBitmap){
+fuente=await createImageBitmap(file,{imageOrientation:"from-image"})
+}else{
+const dataUrl=await fileToBase64(file)
+fuente=await new Promise((ok,no)=>{
 const img=new Image()
-img.onload=()=>{
-let w=img.width,h=img.height
-if(!w||!h) return reject(new Error("Imagen inválida"))
+img.onload=()=>ok(img)
+img.onerror=()=>no(new Error("No se pudo leer la imagen"))
+img.src=dataUrl
+})
+}
+
+let w=fuente.width,h=fuente.height
+if(!w||!h) throw new Error("Imagen inválida")
 if(w>maxW){h=Math.round(h*(maxW/w));w=maxW}
+
 const canvas=document.createElement("canvas")
 canvas.width=w
 canvas.height=h
 const ctx=canvas.getContext("2d")
 ctx.fillStyle="#ffffff"
 ctx.fillRect(0,0,w,h)
-ctx.drawImage(img,0,0,w,h)
-resolve(canvas.toDataURL("image/jpeg",calidad))
-}
-img.onerror=()=>reject(new Error("No se pudo procesar la imagen"))
-img.src=dataUrl
-})
+ctx.drawImage(fuente,0,0,w,h)
+if(fuente.close) fuente.close()
+
+const salida=canvas.toDataURL("image/jpeg",calidad)
+if(!esImagenValida(salida)) throw new Error("Error al procesar la imagen")
+return salida
 }
 
 async function imagenParaGuardar(entrada){
-let dataUrl=typeof entrada==="string"?entrada:await fileToBase64(entrada)
-if(!esImagenValida(dataUrl)) throw new Error("Formato de imagen no válido")
-
-// Archivos pequeños: guardar original (evita fondo negro y errores de compresión)
-if(dataUrl.length<500000) return dataUrl
-
-let calidad=0.82
-let comprimida=await comprimirImagen(dataUrl,900,calidad)
-while(comprimida.length>900000&&calidad>0.4){
-calidad-=0.1
-comprimida=await comprimirImagen(dataUrl,800,calidad)
+if(typeof entrada==="string"){
+if(!esImagenValida(entrada)) throw new Error("Formato de imagen no válido")
+return entrada
 }
-return comprimida
+
+const file=entrada
+let dataUrl=await archivoADataUrl(file)
+if(!esImagenValida(dataUrl)) throw new Error("Formato de imagen no válido. Usa JPG o PNG.")
+
+if(dataUrl.length<=LIMITE_IMG_FIRESTORE) return dataUrl
+
+try{
+const reducida=await redimensionarArchivo(file,1200,0.85)
+if(reducida.length<=LIMITE_IMG_FIRESTORE) return reducida
+const masPequena=await redimensionarArchivo(file,800,0.75)
+if(masPequena.length<=LIMITE_IMG_FIRESTORE) return masPequena
+}catch(e){
+console.warn("redimensionar:",e)
+}
+
+if(dataUrl.length<=1040000) return dataUrl
+throw new Error("La imagen es muy pesada. Prueba con una foto menor (menos de 1 MB).")
 }
 
 // CONFIG
@@ -349,6 +391,8 @@ desc.value=""
 link.value=""
 obs.value=""
 foto.value=""
+const prev=document.getElementById("cotPreview")
+if(prev){prev.src="";prev.style.display="none"}
 }
 
 function fileToBase64(file){
@@ -369,7 +413,12 @@ try{
 await esperarFirebase()
 
 let imgData=""
-if(foto.files[0]) imgData=await imagenParaGuardar(foto.files[0])
+if(foto.files[0]){
+imgData=await imagenParaGuardar(foto.files[0])
+}else if(cotId.value){
+let actual=cotizacionesCache.find(x=>x.id===cotId.value)
+imgData=actual?.img||""
+}
 
 let data={
 ...ultima,
@@ -433,19 +482,25 @@ function verDetalleCot(id){
 let c=cotizacionesCache.find(x=>x.id==id)
 
 detalleCot.innerHTML=`
-<div class="card">
-<h3>${c.desc}</h3>
+<div class="card" id="detalleCotCard">
+<h3>${escapeHtml(c.desc)}</h3>
 <b>Total:</b> $${Number(c.total).toFixed(2)}<br><br>
 
 <b>Observaciones:</b><br>
-${c.obs || "-"}<br><br>
+${escapeHtml(c.obs || "-")}<br><br>
 
 <b>Enlace:</b><br>
-${c.link ? `<a href="${c.link}" target="_blank">Ver modelo</a>` : "-"}<br>
-
-${c.img ? `<img src="${c.img}">` : ""}
+${c.link ? `<a href="${escapeHtml(c.link)}" target="_blank">Ver modelo</a>` : "-"}<br>
 </div>
 `
+
+if(esImagenValida(c.img)){
+const img=document.createElement("img")
+img.className="detalle-img"
+img.alt=c.desc||"Foto"
+img.src=c.img
+document.getElementById("detalleCotCard").appendChild(img)
+}
 }
 
 function editarCot(id){
@@ -455,6 +510,12 @@ cotId.value=c.id
 desc.value=c.desc||""
 link.value=c.link||""
 obs.value=c.obs||""
+
+const prev=document.getElementById("cotPreview")
+if(prev){
+if(esImagenValida(c.img)){prev.src=c.img;prev.style.display="block"}
+else{prev.src="";prev.style.display="none"}
+}
 
 mostrar("quotes",document.querySelectorAll(".tab")[1])
 }
@@ -685,7 +746,19 @@ if(portFoto){
 portFoto.addEventListener("change",async()=>{
 if(!portFoto.files[0]) return
 try{
-mostrarPreviewPort(await imagenParaGuardar(portFoto.files[0]))
+mostrarPreviewPort(await archivoADataUrl(portFoto.files[0]))
+}catch(e){alert(mensajeFirebaseError(e))}
+})
+}
+
+if(foto){
+foto.addEventListener("change",async()=>{
+if(!foto.files[0]) return
+try{
+const prev=document.getElementById("cotPreview")
+if(!prev) return
+prev.src=await archivoADataUrl(foto.files[0])
+prev.style.display="block"
 }catch(e){alert(mensajeFirebaseError(e))}
 })
 }
