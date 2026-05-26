@@ -148,6 +148,8 @@ img{max-width:150px;border-radius:8px;margin-top:10px}
 <label>Nombre</label>
 <input id="portNombre" placeholder="Ej: Figura Dragon Ball">
 
+<input type="hidden" id="portImgData">
+
 <label>Imagen</label>
 <input type="file" id="portFoto" accept="image/*">
 <img id="portPreview" class="portfolio-preview" style="display:none">
@@ -248,81 +250,19 @@ function esImagenValida(src){
 return typeof src==="string"&&src.startsWith("data:image/")&&src.length>500
 }
 
-const LIMITE_IMG_FIRESTORE=900000
+const LIMITE_IMG_FIRESTORE=1040000
 
-async function archivoADataUrl(file){
-if(window.createImageBitmap){
-try{
-const bmp=await createImageBitmap(file,{imageOrientation:"from-image"})
-const canvas=document.createElement("canvas")
-canvas.width=bmp.width
-canvas.height=bmp.height
-canvas.getContext("2d").drawImage(bmp,0,0)
-if(bmp.close) bmp.close()
-const tipo=file.type==="image/png"?"image/png":"image/jpeg"
-return canvas.toDataURL(tipo,tipo==="image/png"?undefined:0.92)
-}catch(e){
-console.warn("createImageBitmap:",e)
-}
-}
-return fileToBase64(file)
-}
-
-async function redimensionarArchivo(file,maxW=1200,calidad=0.88){
-let fuente
-if(window.createImageBitmap){
-fuente=await createImageBitmap(file,{imageOrientation:"from-image"})
-}else{
-const dataUrl=await fileToBase64(file)
-fuente=await new Promise((ok,no)=>{
-const img=new Image()
-img.onload=()=>ok(img)
-img.onerror=()=>no(new Error("No se pudo leer la imagen"))
-img.src=dataUrl
-})
-}
-
-let w=fuente.width,h=fuente.height
-if(!w||!h) throw new Error("Imagen inválida")
-if(w>maxW){h=Math.round(h*(maxW/w));w=maxW}
-
-const canvas=document.createElement("canvas")
-canvas.width=w
-canvas.height=h
-const ctx=canvas.getContext("2d")
-ctx.fillStyle="#ffffff"
-ctx.fillRect(0,0,w,h)
-ctx.drawImage(fuente,0,0,w,h)
-if(fuente.close) fuente.close()
-
-const salida=canvas.toDataURL("image/jpeg",calidad)
-if(!esImagenValida(salida)) throw new Error("Error al procesar la imagen")
-return salida
-}
-
+// Guarda igual que las cotizaciones antiguas: data:image/jpeg;base64,... sin canvas
 async function imagenParaGuardar(entrada){
 if(typeof entrada==="string"){
 if(!esImagenValida(entrada)) throw new Error("Formato de imagen no válido")
 return entrada
 }
 
-const file=entrada
-let dataUrl=await archivoADataUrl(file)
+const dataUrl=await fileToBase64(entrada)
 if(!esImagenValida(dataUrl)) throw new Error("Formato de imagen no válido. Usa JPG o PNG.")
-
-if(dataUrl.length<=LIMITE_IMG_FIRESTORE) return dataUrl
-
-try{
-const reducida=await redimensionarArchivo(file,1200,0.85)
-if(reducida.length<=LIMITE_IMG_FIRESTORE) return reducida
-const masPequena=await redimensionarArchivo(file,800,0.75)
-if(masPequena.length<=LIMITE_IMG_FIRESTORE) return masPequena
-}catch(e){
-console.warn("redimensionar:",e)
-}
-
-if(dataUrl.length<=1040000) return dataUrl
-throw new Error("La imagen es muy pesada. Prueba con una foto menor (menos de 1 MB).")
+if(dataUrl.length>LIMITE_IMG_FIRESTORE) throw new Error("La imagen es muy pesada para Firebase. Usa una foto menor a ~750 KB.")
+return dataUrl
 }
 
 // CONFIG
@@ -465,6 +405,7 @@ $${Number(c.total).toFixed(2)}
 <div>
 <button onclick="event.stopPropagation(); editarCot('${c.id}')">✏️</button>
 <button onclick="event.stopPropagation(); crearVenta('${c.id}')">💵</button>
+<button onclick="event.stopPropagation(); enviarAPortafolio('${c.id}')">🖼</button>
 <button onclick="event.stopPropagation(); eliminarCot('${c.id}')">🗑</button>
 </div>
 </div>`
@@ -537,6 +478,27 @@ mostrar("sales",document.querySelectorAll(".tab")[2])
 setTimeout(()=>{
 precio.value=c.total
 figura.value=c.desc
+},50)
+}
+
+function enviarAPortafolio(id){
+let c=cotizacionesCache.find(x=>x.id===id)
+if(!c) return
+if(!esImagenValida(c.img)) return alert("Esta cotización no tiene imagen para enviar al portafolio")
+
+mostrar("portfolio",document.querySelectorAll(".tab")[3])
+
+setTimeout(()=>{
+portId.value=""
+portNombre.value=c.desc||""
+let lineas=[]
+if(c.obs) lineas.push(c.obs)
+if(c.total!=null) lineas.push("Precio: $"+Number(c.total).toFixed(2))
+portCaracteristicas.value=lineas.join("\n")
+portImgData.value=c.img
+portFoto.value=""
+mostrarPreviewPort(c.img)
+window.scrollTo({top:0,behavior:"smooth"})
 },50)
 }
 
@@ -727,6 +689,7 @@ function limpiarPortafolio(){
 portId.value=""
 portNombre.value=""
 portCaracteristicas.value=""
+portImgData.value=""
 portFoto.value=""
 portPreview.style.display="none"
 portPreview.src=""
@@ -746,7 +709,8 @@ if(portFoto){
 portFoto.addEventListener("change",async()=>{
 if(!portFoto.files[0]) return
 try{
-mostrarPreviewPort(await archivoADataUrl(portFoto.files[0]))
+portImgData.value=""
+mostrarPreviewPort(await fileToBase64(portFoto.files[0]))
 }catch(e){alert(mensajeFirebaseError(e))}
 })
 }
@@ -757,7 +721,7 @@ if(!foto.files[0]) return
 try{
 const prev=document.getElementById("cotPreview")
 if(!prev) return
-prev.src=await archivoADataUrl(foto.files[0])
+prev.src=await fileToBase64(foto.files[0])
 prev.style.display="block"
 }catch(e){alert(mensajeFirebaseError(e))}
 })
@@ -773,6 +737,8 @@ await esperarFirebase()
 let imgData=""
 if(portFoto.files[0]){
 imgData=await imagenParaGuardar(portFoto.files[0])
+}else if(portImgData.value&&esImagenValida(portImgData.value)){
+imgData=portImgData.value
 }else if(portId.value){
 let actual=portafolioCache.find(x=>x.id===portId.value)
 imgData=actual?.img||""
@@ -874,6 +840,7 @@ portId.value=p.id
 portNombre.value=p.nombre||""
 portCaracteristicas.value=p.caracteristicas||""
 portFoto.value=""
+portImgData.value=p.img||""
 mostrarPreviewPort(p.img||"")
 
 mostrar("portfolio",document.querySelectorAll(".tab")[3])
