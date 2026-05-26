@@ -212,6 +212,7 @@ window.doc=doc;
 window.setDoc=setDoc;
 window.getDoc=getDoc;
 window.updateDoc=updateDoc;
+window.dispatchEvent(new Event("firebase-ready"));
 </script>
 
 <script>
@@ -223,8 +224,55 @@ let ventasCache=[]
 let portafolioCache=[]
 let filtroVenta="all"
 
+function esperarFirebase(){
+return new Promise((resolve,reject)=>{
+if(window.db) return resolve()
+const listo=()=>{clearTimeout(t);resolve()}
+const t=setTimeout(()=>reject(new Error("No se pudo conectar con Firebase. Revisa tu internet e intenta de nuevo.")),15000)
+window.addEventListener("firebase-ready",listo,{once:true})
+})
+}
+
+function mensajeFirebaseError(e){
+const code=e?.code||""
+if(code==="permission-denied") return "Permiso denegado en Firebase. En Firestore Rules debes permitir lectura/escritura (incluye colección portafolio)."
+if(code==="unavailable") return "Firebase no disponible en este momento. Intenta otra vez."
+if(String(e?.message||"").toLowerCase().includes("longer than")) return "La imagen es demasiado grande para guardar. Usa una foto más pequeña."
+return e?.message||"Error desconocido al conectar con Firebase."
+}
+
+function comprimirImagen(dataUrl,maxW=900,calidad=0.75){
+return new Promise((resolve,reject)=>{
+const img=new Image()
+img.onload=()=>{
+let w=img.width,h=img.height
+if(w>maxW){h=Math.round(h*(maxW/w));w=maxW}
+const canvas=document.createElement("canvas")
+canvas.width=w
+canvas.height=h
+canvas.getContext("2d").drawImage(img,0,0,w,h)
+resolve(canvas.toDataURL("image/jpeg",calidad))
+}
+img.onerror=()=>reject(new Error("No se pudo procesar la imagen"))
+img.src=dataUrl
+})
+}
+
+async function imagenParaGuardar(entrada){
+let dataUrl=typeof entrada==="string"?entrada:await fileToBase64(entrada)
+let calidad=0.75
+let comprimida=await comprimirImagen(dataUrl,900,calidad)
+while(comprimida.length>900000&&calidad>0.35){
+calidad-=0.1
+comprimida=await comprimirImagen(dataUrl,800,calidad)
+}
+return comprimida
+}
+
 // CONFIG
 async function cargarConfig(){
+try{
+await esperarFirebase()
 let ref=doc(db,"config","default")
 let snap=await getDoc(ref)
 
@@ -237,9 +285,12 @@ extraTime.value=configData.extraTime
 costoHora.value=configData.costoHora
 costoEnergia.value=configData.costoEnergia
 porcentajeGanancia.value=configData.porcentajeGanancia
+}catch(e){alert(mensajeFirebaseError(e))}
 }
 
 async function guardarConfig(){
+try{
+await esperarFirebase()
 configData={
 costoKg:+costoKg.value||0,
 extraFil:+extraFil.value||0,
@@ -250,6 +301,7 @@ porcentajeGanancia:+porcentajeGanancia.value||0
 }
 await setDoc(doc(db,"config","default"),configData)
 alert("Configuración guardada")
+}catch(e){alert(mensajeFirebaseError(e))}
 }
 
 // CALC
@@ -297,12 +349,13 @@ reader.onerror=reject
 async function guardarCot(){
 
 if(!desc.value) return alert("Descripción requerida")
+if(!ultima.total) return alert("Primero calcula el precio en la pestaña Calcular")
+
+try{
+await esperarFirebase()
 
 let imgData=""
-
-if(foto.files[0]){
-imgData = await fileToBase64(foto.files[0])
-}
+if(foto.files[0]) imgData=await imagenParaGuardar(foto.files[0])
 
 let data={
 ...ultima,
@@ -323,10 +376,13 @@ alert("Cotización guardada")
 
 limpiarCot()
 cargarCot()
+}catch(e){alert(mensajeFirebaseError(e))}
 }
 
 async function cargarCot(){
 
+try{
+await esperarFirebase()
 let snap=await getDocs(collection(db,"cotizaciones"))
 cotizacionesCache=[]
 
@@ -352,6 +408,10 @@ $${Number(c.total).toFixed(2)}
 })
 
 listaCot.innerHTML=html
+}catch(e){
+listaCot.innerHTML=""
+alert(mensajeFirebaseError(e))
+}
 }
 
 function verDetalleCot(id){
@@ -387,8 +447,11 @@ mostrar("quotes",document.querySelectorAll(".tab")[1])
 
 async function eliminarCot(id){
 if(!confirm("Eliminar cotización?")) return
+try{
+await esperarFirebase()
 await deleteDoc(doc(db,"cotizaciones",id))
 cargarCot()
+}catch(e){alert(mensajeFirebaseError(e))}
 }
 
 function crearVenta(id){
@@ -417,6 +480,9 @@ async function guardarVenta(){
 
 if(!cliente.value) return alert("Cliente requerido")
 
+try{
+await esperarFirebase()
+
 let fechaVal = fechaVenta.value 
   ? new Date(fechaVenta.value)
   : new Date()
@@ -439,6 +505,7 @@ alert("Venta guardada")
 
 limpiarVenta()
 cargarVentas()
+}catch(e){alert(mensajeFirebaseError(e))}
 }
 
 function setFiltro(tipo){
@@ -448,6 +515,8 @@ cargarVentas()
 
 async function cargarVentas(){
 
+try{
+await esperarFirebase()
 let snap=await getDocs(collection(db,"ventas"))
 ventasCache=[]
 
@@ -503,6 +572,11 @@ resumenVentas.innerHTML=`
 <b>Pagado:</b> $${totalPagado.toFixed(2)}<br>
 <b>Pendiente:</b> $${totalPendiente.toFixed(2)}
 `
+}catch(e){
+listaVentas.innerHTML=""
+resumenVentas.innerHTML=""
+alert(mensajeFirebaseError(e))
+}
 }
 
 function verDetalleVenta(id){
@@ -547,6 +621,8 @@ mostrar("sales",document.querySelectorAll(".tab")[2])
 
 async function togglePagado(id){
 
+try{
+await esperarFirebase()
 let v=ventasCache.find(x=>x.id==id)
 
 await updateDoc(doc(db,"ventas",id),{
@@ -554,12 +630,16 @@ pagado: !v.pagado
 })
 
 cargarVentas()
+}catch(e){alert(mensajeFirebaseError(e))}
 }
 
 async function eliminarVenta(id){
 if(!confirm("Eliminar venta?")) return
+try{
+await esperarFirebase()
 await deleteDoc(doc(db,"ventas",id))
 cargarVentas()
+}catch(e){alert(mensajeFirebaseError(e))}
 }
 
 // ===== PORTAFOLIO =====
@@ -587,18 +667,25 @@ portPreview.src=src
 portPreview.style.display="block"
 }
 
+if(portFoto){
 portFoto.addEventListener("change",async()=>{
 if(!portFoto.files[0]) return
-mostrarPreviewPort(await fileToBase64(portFoto.files[0]))
+try{
+mostrarPreviewPort(await imagenParaGuardar(portFoto.files[0]))
+}catch(e){alert(mensajeFirebaseError(e))}
 })
+}
 
 async function guardarPortafolio(){
 
 if(!portNombre.value.trim()) return alert("Nombre requerido")
 
+try{
+await esperarFirebase()
+
 let imgData=""
 if(portFoto.files[0]){
-imgData=await fileToBase64(portFoto.files[0])
+imgData=await imagenParaGuardar(portFoto.files[0])
 }else if(portId.value){
 let actual=portafolioCache.find(x=>x.id===portId.value)
 imgData=actual?.img||""
@@ -622,6 +709,7 @@ alert("Pieza guardada")
 
 limpiarPortafolio()
 cargarPortafolio()
+}catch(e){alert(mensajeFirebaseError(e))}
 }
 
 function renderCaracteristicas(texto){
@@ -632,6 +720,8 @@ return "<ul>"+items.map(i=>"<li>"+escapeHtml(i)+"</li>").join("")+"</ul>"
 
 async function cargarPortafolio(){
 
+try{
+await esperarFirebase()
 let snap=await getDocs(collection(db,"portafolio"))
 portafolioCache=[]
 
@@ -656,6 +746,10 @@ ${renderCaracteristicas(p.caracteristicas)}
 })
 
 listaPortafolio.innerHTML=html||"<p style='grid-column:1/-1;color:#94a3b8'>Aún no hay piezas en el portafolio.</p>"
+}catch(e){
+listaPortafolio.innerHTML=""
+alert(mensajeFirebaseError(e))
+}
 }
 
 function editarPortafolio(id){
@@ -674,8 +768,11 @@ window.scrollTo({top:0,behavior:"smooth"})
 
 async function eliminarPortafolio(id){
 if(!confirm("¿Eliminar esta pieza del portafolio?")) return
+try{
+await esperarFirebase()
 await deleteDoc(doc(db,"portafolio",id))
 cargarPortafolio()
+}catch(e){alert(mensajeFirebaseError(e))}
 }
 
 // UI
@@ -698,7 +795,13 @@ if(tab=="portfolio") cargarPortafolio()
 if(tab=="configTab") cargarConfig()
 }
 
-window.onload=()=>{
+window.onload=async()=>{
+try{
+await esperarFirebase()
+await cargarConfig()
+}catch(e){
+console.error(e)
+}
 mostrar("calc",document.querySelectorAll(".tab")[0])
 }
 
