@@ -18,14 +18,15 @@ body{font-family:Arial;background:#0f172a;color:#fff;margin:0}
 .tab{flex:1;min-width:70px;padding:12px;background:#334155;cursor:pointer;text-align:center;border-radius:8px;font-size:13px}
 .portfolio-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:12px}
 .portfolio-card{background:#1e293b;border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
-.portfolio-card img{width:100%;max-width:none;margin-top:0;aspect-ratio:1;object-fit:cover;display:block;background:#334155}
-.portfolio-card img.sin-imagen{object-fit:contain;padding:20px;opacity:.6}
+.portfolio-img-wrap{width:100%;min-height:80px;max-height:150px;display:flex;align-items:center;justify-content:center;background:#334155;padding:6px}
+.portfolio-card img{width:100%;max-width:none;max-height:140px;margin-top:0;aspect-ratio:unset;object-fit:contain;display:block;background:transparent}
+.portfolio-card img.sin-imagen{max-height:80px;object-fit:contain;padding:12px;opacity:.6}
 .portfolio-body{padding:10px;flex:1}
 .portfolio-body h4{margin:0 0 6px;font-size:14px}
 .portfolio-body ul{margin:0;padding-left:16px;font-size:12px;color:#cbd5e1}
 .portfolio-actions{display:flex;gap:6px;padding:0 10px 10px}
 .portfolio-actions button{flex:1;margin:0;padding:8px;font-size:12px}
-.portfolio-preview{max-width:120px;border-radius:8px;margin-top:8px}
+.img-preview{max-width:96px;max-height:96px;width:auto;height:auto;object-fit:contain;margin-top:8px;border-radius:8px;display:block;background:#334155}
 @media(max-width:1100px){.portfolio-grid{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:700px){.portfolio-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:420px){.portfolio-grid{grid-template-columns:1fr}}
@@ -37,7 +38,7 @@ button.danger{background:#dc2626}
 .line{display:flex;justify-content:space-between;align-items:center}
 .total{font-size:22px;color:#22c55e}
 img{max-width:150px;border-radius:8px;margin-top:10px}
-.detalle-img,.portfolio-preview{max-width:100%;width:auto;height:auto;margin-top:10px;border-radius:8px;display:block}
+.detalle-img{max-width:min(100%,220px);max-height:200px;width:auto;height:auto;object-fit:contain;margin-top:10px;border-radius:8px;display:block;background:#334155}
 </style>
 </head>
 
@@ -85,7 +86,7 @@ img{max-width:150px;border-radius:8px;margin-top:10px}
 
 <label>Foto (opcional)</label>
 <input type="file" id="foto" accept="image/*">
-<img id="cotPreview" class="detalle-img" style="display:none" alt="Vista previa">
+<img id="cotPreview" class="img-preview" style="display:none" alt="Vista previa">
 
 <label>Observaciones</label>
 <textarea id="obs"></textarea>
@@ -152,7 +153,7 @@ img{max-width:150px;border-radius:8px;margin-top:10px}
 
 <label>Imagen</label>
 <input type="file" id="portFoto" accept="image/*">
-<img id="portPreview" class="portfolio-preview" style="display:none">
+<img id="portPreview" class="img-preview" style="display:none" alt="Vista previa">
 
 <label>Características principales (una por línea)</label>
 <textarea id="portCaracteristicas" placeholder="PLA multicolor&#10;15 cm de alto&#10;Tiempo: 8 h"></textarea>
@@ -775,6 +776,9 @@ function crearTarjetaPortafolio(p){
 const card=document.createElement("div")
 card.className="portfolio-card"
 
+const imgWrap=document.createElement("div")
+imgWrap.className="portfolio-img-wrap"
+
 const img=document.createElement("img")
 img.alt=p.nombre||"Pieza"
 img.loading="lazy"
@@ -787,6 +791,7 @@ img.removeAttribute("src")
 }else{
 img.classList.add("sin-imagen")
 }
+imgWrap.appendChild(img)
 
 const body=document.createElement("div")
 body.className="portfolio-body"
@@ -805,7 +810,7 @@ btnDel.textContent="🗑"
 btnDel.onclick=()=>eliminarPortafolio(p.id)
 
 actions.append(btnEdit,btnDel)
-card.append(img,body,actions)
+card.append(imgWrap,body,actions)
 return card
 }
 
