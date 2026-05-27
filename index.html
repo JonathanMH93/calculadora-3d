@@ -37,6 +37,10 @@ button{padding:10px;margin-top:8px;background:#2563eb;color:#fff;border:none;bor
 button.danger{background:#dc2626}
 .line{display:flex;justify-content:space-between;align-items:center}
 .total{font-size:22px;color:#22c55e}
+.resumen-finanzas b{display:block;margin-top:8px}
+.saldo-positivo{color:#22c55e;font-size:20px;font-weight:bold}
+.saldo-negativo{color:#ef4444;font-size:20px;font-weight:bold}
+.gasto-total-line{color:#fbbf24;font-size:13px}
 img{max-width:150px;border-radius:8px;margin-top:10px}
 .detalle-img{max-width:min(100%,220px);max-height:200px;width:auto;height:auto;object-fit:contain;margin-top:10px;border-radius:8px;display:block;background:#334155}
 </style>
@@ -51,6 +55,7 @@ img{max-width:150px;border-radius:8px;margin-top:10px}
 <div class="tab" onclick="mostrar('quotes',this)">📦 Cotizaciones</div>
 <div class="tab" onclick="mostrar('sales',this)">💵 Ventas</div>
 <div class="tab" onclick="mostrar('portfolio',this)">🖼 Portafolio</div>
+<div class="tab" onclick="mostrar('gastosTab',this)">📉 Gastos</div>
 <div class="tab" onclick="mostrar('configTab',this)">⚙️ Config</div>
 </div>
 
@@ -166,6 +171,50 @@ img{max-width:150px;border-radius:8px;margin-top:10px}
 
 </div>
 
+<!-- GASTOS -->
+<div id="gastosTab" style="display:none">
+
+<div class="card" id="resumenFinanzas"></div>
+
+<div class="card">
+<input type="hidden" id="gastoId">
+
+<label>Concepto</label>
+<input id="gastoConcepto" list="listaConceptosGasto" placeholder="Ej: Filamento PLA negro">
+<datalist id="listaConceptosGasto">
+<option value="Filamento">
+<option value="Impresora / equipo">
+<option value="Aceite lubricante">
+<option value="Boquilla / repuestos">
+<option value="Electricidad">
+<option value="Herramientas">
+<option value="Embalaje">
+<option value="Pintura / acabado">
+<option value="Otro">
+</datalist>
+
+<label>Fecha</label>
+<input type="date" id="gastoFecha">
+
+<label>Precio total de la compra ($)</label>
+<input id="gastoTotal" type="number" step="0.01" min="0" placeholder="Ej: 90 (lo que pagaste en total)" oninput="previewGastoUnitario()">
+
+<label>Cantidad</label>
+<input id="gastoCantidad" type="number" step="1" min="1" value="1" placeholder="Ej: 5 rollos" oninput="previewGastoUnitario()">
+
+<p id="gastoUnitarioPreview" style="color:#94a3b8;font-size:13px;margin:4px 0 8px"></p>
+
+<label>Notas (opcional)</label>
+<input id="gastoNotas" placeholder="Ej: Compra Mercado Libre">
+
+<button onclick="guardarGasto()">Guardar gasto</button>
+<button onclick="limpiarGasto()">Cancelar</button>
+</div>
+
+<div id="listaGastos"></div>
+
+</div>
+
 <!-- CONFIG -->
 <div id="configTab" style="display:none">
 <div class="card">
@@ -228,6 +277,7 @@ let ultima={}
 let cotizacionesCache=[]
 let ventasCache=[]
 let portafolioCache=[]
+let gastosCache=[]
 let filtroVenta="all"
 
 function esperarFirebase(){
@@ -861,6 +911,183 @@ cargarPortafolio()
 }catch(e){alert(mensajeFirebaseError(e))}
 }
 
+// ===== GASTOS =====
+
+function fechaDeFirestore(f){
+if(f?.seconds) return new Date(f.seconds*1000)
+if(f instanceof Date) return f
+if(typeof f==="string"&&f) return new Date(f)
+return new Date()
+}
+
+function montoGasto(g){
+if(g.total!=null&&g.total!=="") return Number(Number(g.total).toFixed(2))
+return Number((Number(g.precio||0)*Number(g.cantidad||1)).toFixed(2))
+}
+
+function precioUnitarioGasto(g){
+const cant=Number(g.cantidad||1)||1
+return Number((montoGasto(g)/cant).toFixed(2))
+}
+
+function previewGastoUnitario(){
+const el=document.getElementById("gastoUnitarioPreview")
+if(!el) return
+const total=Number(gastoTotal.value)||0
+const cant=Number(gastoCantidad.value)||1
+if(total>0&&cant>0) el.textContent="Precio por unidad: $"+(total/cant).toFixed(2)
+else el.textContent=""
+}
+
+function limpiarGasto(){
+gastoId.value=""
+gastoConcepto.value=""
+gastoTotal.value=""
+gastoCantidad.value="1"
+gastoNotas.value=""
+gastoFecha.value=new Date().toISOString().split("T")[0]
+previewGastoUnitario()
+}
+
+async function guardarGasto(){
+
+if(!gastoConcepto.value.trim()) return alert("Concepto requerido")
+if(!gastoFecha.value) return alert("Fecha requerida")
+
+const totalCompra=Number(gastoTotal.value)
+const cantidad=Number(gastoCantidad.value)||1
+if(totalCompra<=0) return alert("Precio total debe ser mayor a 0")
+if(cantidad<=0) return alert("Cantidad debe ser mayor a 0")
+
+const precioUnit=Number((totalCompra/cantidad).toFixed(2))
+
+try{
+await esperarFirebase()
+
+const data={
+concepto:gastoConcepto.value.trim(),
+fecha:new Date(gastoFecha.value),
+total:Number(totalCompra.toFixed(2)),
+cantidad:Number(cantidad.toFixed(2)),
+precio:precioUnit,
+notas:(gastoNotas.value||"").trim()
+}
+
+if(gastoId.value){
+await updateDoc(doc(db,"gastos",gastoId.value),data)
+alert("Gasto actualizado")
+}else{
+await addDoc(collection(db,"gastos"),data)
+alert("Gasto guardado")
+}
+
+limpiarGasto()
+cargarGastos()
+}catch(e){alert(mensajeFirebaseError(e))}
+}
+
+async function actualizarResumenFinanzas(totalGastos){
+
+let ingresosPagados=0
+let ingresosTotales=0
+let pendiente=0
+
+try{
+const snap=await getDocs(collection(db,"ventas"))
+snap.forEach(d=>{
+const v=d.data()
+const p=Number(v.precio||0)
+ingresosTotales+=p
+if(v.pagado) ingresosPagados+=p
+else pendiente+=p
+})
+}catch(e){
+console.warn("resumen ventas:",e)
+}
+
+const saldo=ingresosPagados-totalGastos
+const claseSaldo=saldo>=0?"saldo-positivo":"saldo-negativo"
+
+resumenFinanzas.innerHTML=`
+<b>Resumen del negocio</b>
+<span class="gasto-total-line">Total gastos: $${totalGastos.toFixed(2)}</span><br>
+<span style="color:#22c55e">Ingresos (ventas pagadas): $${ingresosPagados.toFixed(2)}</span><br>
+<span style="color:#94a3b8">Ventas totales registradas: $${ingresosTotales.toFixed(2)}</span><br>
+<span style="color:#fbbf24">Por cobrar (pendiente): $${pendiente.toFixed(2)}</span><br>
+<b>Saldo (pagado − gastos):</b>
+<span class="${claseSaldo}">$${saldo.toFixed(2)}</span>
+`
+}
+
+async function cargarGastos(){
+
+try{
+await esperarFirebase()
+const snap=await getDocs(collection(db,"gastos"))
+gastosCache=[]
+
+let html=""
+let totalGastos=0
+
+snap.forEach(d=>{
+const g={id:d.id,...d.data()}
+gastosCache.push(g)
+const sub=montoGasto(g)
+const unit=precioUnitarioGasto(g)
+totalGastos+=sub
+
+const fecha=fechaDeFirestore(g.fecha)
+
+html+=`
+<div class="card line">
+<div>
+<b>${escapeHtml(g.concepto)}</b><br>
+${fecha.toLocaleDateString()} · ${Number(g.cantidad||1)} uds · $${unit.toFixed(2)} c/u<br>
+<span class="gasto-total-line">Total pagado: $${sub.toFixed(2)}</span>
+${g.notas?`<br><small style="color:#94a3b8">${escapeHtml(g.notas)}</small>`:""}
+</div>
+<div>
+<button onclick="editarGasto('${g.id}')">✏️</button>
+<button class="danger" onclick="eliminarGasto('${g.id}')">🗑</button>
+</div>
+</div>`
+})
+
+listaGastos.innerHTML=html||"<p style='color:#94a3b8'>Aún no hay gastos registrados.</p>"
+await actualizarResumenFinanzas(totalGastos)
+}catch(e){
+listaGastos.innerHTML=""
+alert(mensajeFirebaseError(e))
+}
+}
+
+function editarGasto(id){
+const g=gastosCache.find(x=>x.id===id)
+if(!g) return
+
+gastoId.value=g.id
+gastoConcepto.value=g.concepto||""
+gastoTotal.value=montoGasto(g)
+gastoCantidad.value=g.cantidad||1
+gastoNotas.value=g.notas||""
+
+const fecha=fechaDeFirestore(g.fecha)
+gastoFecha.value=fecha.toISOString().split("T")[0]
+previewGastoUnitario()
+
+mostrar("gastosTab",document.querySelectorAll(".tab")[4])
+window.scrollTo({top:0,behavior:"smooth"})
+}
+
+async function eliminarGasto(id){
+if(!confirm("¿Eliminar este gasto?")) return
+try{
+await esperarFirebase()
+await deleteDoc(doc(db,"gastos",id))
+cargarGastos()
+}catch(e){alert(mensajeFirebaseError(e))}
+}
+
 // UI
 function mostrar(tab,el){
 
@@ -868,6 +1095,7 @@ document.getElementById("calc").style.display="none"
 document.getElementById("quotes").style.display="none"
 document.getElementById("sales").style.display="none"
 document.getElementById("portfolio").style.display="none"
+document.getElementById("gastosTab").style.display="none"
 document.getElementById("configTab").style.display="none"
 
 document.getElementById(tab).style.display="block"
@@ -878,6 +1106,7 @@ el.classList.add("active")
 if(tab=="quotes") cargarCot()
 if(tab=="sales") cargarVentas()
 if(tab=="portfolio") cargarPortafolio()
+if(tab=="gastosTab") cargarGastos()
 if(tab=="configTab") cargarConfig()
 }
 
@@ -885,6 +1114,7 @@ window.onload=async()=>{
 try{
 await esperarFirebase()
 await cargarConfig()
+if(gastoFecha) gastoFecha.value=new Date().toISOString().split("T")[0]
 }catch(e){
 console.error(e)
 }
