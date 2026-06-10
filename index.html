@@ -41,6 +41,12 @@ button.danger{background:#dc2626}
 .saldo-positivo{color:#22c55e;font-size:20px;font-weight:bold}
 .saldo-negativo{color:#ef4444;font-size:20px;font-weight:bold}
 .gasto-total-line{color:#fbbf24;font-size:13px}
+.detalle-costos-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #334155;font-size:14px}
+.detalle-costos-row:last-child{border-bottom:none}
+.detalle-costos-row span:last-child{font-weight:600}
+.detalle-costos-total{margin-top:12px;padding-top:12px;border-top:2px solid #334155}
+.detalle-costos-minimo{color:#fbbf24;font-size:13px;margin-top:10px}
+.detalle-costos-ganancia{color:#22c55e}
 img{max-width:150px;border-radius:8px;margin-top:10px}
 .detalle-img{max-width:min(100%,220px);max-height:200px;width:auto;height:auto;object-fit:contain;margin-top:10px;border-radius:8px;display:block;background:#334155}
 #loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:linear-gradient(145deg,#0f172a 0%,#1e293b 50%,#0f172a 100%)}
@@ -175,6 +181,19 @@ img{max-width:150px;border-radius:8px;margin-top:10px}
 <button onclick="calcular()">Calcular</button>
 
 <div class="card total">$ <span id="total">0.00</span></div>
+
+<button id="btnDetalleCostos" style="display:none" onclick="toggleDetalleCostos()">📊 Detalle de costos</button>
+
+<div id="detalleCostos" class="card" style="display:none">
+<b style="display:block;margin-bottom:12px">Desglose del precio</b>
+<div class="detalle-costos-row"><span>Material (filamento)</span><span id="dcMaterial">$0.00</span></div>
+<div class="detalle-costos-row"><span>Costo máquina</span><span id="dcMaquina">$0.00</span></div>
+<div class="detalle-costos-row"><span>Costo energía</span><span id="dcEnergia">$0.00</span></div>
+<div class="detalle-costos-row detalle-costos-total"><span>Subtotal (costos reales)</span><span id="dcSubtotal">$0.00</span></div>
+<div class="detalle-costos-row detalle-costos-ganancia"><span>Ganancia (<span id="dcPctGanancia">0</span>%)</span><span id="dcGanancia">$0.00</span></div>
+<div class="detalle-costos-row detalle-costos-total"><span>Precio de venta</span><span id="dcTotal">$0.00</span></div>
+<p class="detalle-costos-minimo">💡 <b>Precio mínimo</b> (sin ganancia): <span id="dcMinimo">$0.00</span> — no conviene bajar de aquí.</p>
+</div>
 
 <button id="btnCot" style="display:none" onclick="irCot()">Cotizar</button>
 </div>
@@ -632,22 +651,60 @@ alert("Configuración guardada")
 }
 
 // CALC
+function calcularDesglose(f,h1,m1){
+const material=(f*(1+configData.extraFil/100)/1000)*configData.costoKg
+const horasAjust=(h1+m1/60)*(1+configData.extraTime/100)
+const costoMaquina=horasAjust*configData.costoHora
+const costoEnergia=horasAjust*configData.costoEnergia
+const subtotal=material+costoMaquina+costoEnergia
+const ganancia=subtotal*(configData.porcentajeGanancia/100)
+const total=subtotal+ganancia
+return{
+material:Number(material.toFixed(2)),
+costoMaquina:Number(costoMaquina.toFixed(2)),
+costoEnergia:Number(costoEnergia.toFixed(2)),
+subtotal:Number(subtotal.toFixed(2)),
+ganancia:Number(ganancia.toFixed(2)),
+total:Number(total.toFixed(2))
+}
+}
+
+function mostrarDetalleCostos(d){
+document.getElementById("dcMaterial").textContent="$"+d.material.toFixed(2)
+document.getElementById("dcMaquina").textContent="$"+d.costoMaquina.toFixed(2)
+document.getElementById("dcEnergia").textContent="$"+d.costoEnergia.toFixed(2)
+document.getElementById("dcSubtotal").textContent="$"+d.subtotal.toFixed(2)
+document.getElementById("dcPctGanancia").textContent=configData.porcentajeGanancia
+document.getElementById("dcGanancia").textContent="$"+d.ganancia.toFixed(2)
+document.getElementById("dcTotal").textContent="$"+d.total.toFixed(2)
+document.getElementById("dcMinimo").textContent="$"+d.subtotal.toFixed(2)
+}
+
+function toggleDetalleCostos(){
+const panel=document.getElementById("detalleCostos")
+const btn=document.getElementById("btnDetalleCostos")
+if(!panel||!ultima.desglose) return
+const visible=panel.style.display==="block"
+panel.style.display=visible?"none":"block"
+if(btn) btn.textContent=visible?"📊 Detalle de costos":"📊 Ocultar detalle"
+}
+
 function calcular(){
 let f=+fil.value||0
 let h1=+h.value||0
 let m1=+m.value||0
 
-let total=((f*(1+configData.extraFil/100)/1000)*configData.costoKg)+
-((h1+m1/60)*(1+configData.extraTime/100)*(configData.costoHora+configData.costoEnergia))
+const d=calcularDesglose(f,h1,m1)
 
-total*=1+(configData.porcentajeGanancia/100)
-total=Number(total.toFixed(2))
+document.getElementById("total").innerText=d.total.toFixed(2)
+mostrarDetalleCostos(d)
 
-document.getElementById("total").innerText=total.toFixed(2)
-
-ultima={f,h:h1,m:m1,total}
+ultima={f,h:h1,m:m1,total:d.total,desglose:d}
 
 btnCot.style.display="block"
+btnDetalleCostos.style.display="block"
+document.getElementById("detalleCostos").style.display="block"
+document.getElementById("btnDetalleCostos").textContent="📊 Ocultar detalle"
 }
 
 function irCot(){
