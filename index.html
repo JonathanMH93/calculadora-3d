@@ -53,6 +53,19 @@ img{max-width:150px;border-radius:8px;margin-top:10px}
 .login-btn{width:100%;margin-top:8px;padding:14px;font-size:15px;font-weight:600}
 .login-error{color:#f87171;font-size:13px;text-align:center;min-height:20px;margin-top:8px}
 #appShell{display:none}
+.menu-wrap{max-width:720px;margin:0 auto;padding:32px 20px 48px}
+.menu-header{text-align:center;margin-bottom:36px}
+.menu-header h2{margin:0;font-size:24px;font-weight:600}
+.menu-header p{margin:6px 0 0;color:#94a3b8;font-size:14px}
+.menu-user{margin-top:12px!important;color:#64748b!important;font-size:13px!important}
+.menu-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.menu-item{background:#1e293b;border:1px solid #334155;border-radius:14px;padding:24px 12px;text-align:center;cursor:pointer;transition:background .2s,border-color .2s,transform .15s}
+.menu-item:hover,.menu-item:active{background:#2563eb;border-color:#3b82f6;transform:translateY(-2px)}
+.menu-icon{font-size:32px;line-height:1;display:block;margin-bottom:10px}
+.menu-label{font-size:13px;font-weight:500;color:#e2e8f0}
+.btn-menu-principal{background:#334155;margin:0 0 16px;padding:10px 16px;font-size:13px}
+.tabs-legacy{display:none!important}
+@media(max-width:520px){.menu-grid{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 
@@ -63,7 +76,7 @@ img{max-width:150px;border-radius:8px;margin-top:10px}
 <div class="login-card">
 <div class="login-brand">
 <h1>3D App PRO</h1>
-<p>Sistema de gestión empresarial</p>
+<p>Gestión de impresión 3D</p>
 </div>
 <label>Usuario</label>
 <input id="loginUser" type="text" autocomplete="username" placeholder="Ingrese su usuario">
@@ -75,9 +88,31 @@ img{max-width:150px;border-radius:8px;margin-top:10px}
 </div>
 
 <div id="appShell">
-<div class="container">
 
-<div class="tabs">
+<!-- PASO 2: MENÚ PRINCIPAL -->
+<div id="menuPrincipal">
+<div class="menu-wrap">
+<div class="menu-header">
+<h2>3D App PRO</h2>
+<p>Gestión de impresión 3D</p>
+<p class="menu-user">Bienvenido, <span id="menuUserName">Usuario</span></p>
+</div>
+<div class="menu-grid">
+<div class="menu-item" onclick="irModulo('calc')"><span class="menu-icon">💰</span><span class="menu-label">Calcular</span></div>
+<div class="menu-item" onclick="irModulo('quotes')"><span class="menu-icon">📦</span><span class="menu-label">Cotizaciones</span></div>
+<div class="menu-item" onclick="irModulo('sales')"><span class="menu-icon">💵</span><span class="menu-label">Ventas</span></div>
+<div class="menu-item" onclick="irModulo('portfolio')"><span class="menu-icon">🖼</span><span class="menu-label">Portafolio</span></div>
+<div class="menu-item" onclick="irModulo('gastosTab')"><span class="menu-icon">📉</span><span class="menu-label">Gastos</span></div>
+<div class="menu-item" onclick="irModulo('configTab')"><span class="menu-icon">⚙️</span><span class="menu-label">Configuración</span></div>
+</div>
+</div>
+</div>
+
+<div id="workspace" style="display:none">
+<div class="container">
+<button type="button" class="btn-menu-principal" onclick="mostrarMenuPrincipal()">← Menú principal</button>
+
+<div class="tabs tabs-legacy">
 <div class="tab active" onclick="mostrar('calc',this)">💰 Calcular</div>
 <div class="tab" onclick="mostrar('quotes',this)">📦 Cotizaciones</div>
 <div class="tab" onclick="mostrar('sales',this)">💵 Ventas</div>
@@ -271,6 +306,7 @@ img{max-width:150px;border-radius:8px;margin-top:10px}
 
 </div>
 </div>
+</div>
 
 <!-- FIREBASE -->
 <script type="module">
@@ -330,12 +366,31 @@ document.getElementById("appShell").style.display="block"
 
 function mostrarApp(){
 cerrarPantallaLogin()
-mostrar("calc",document.querySelectorAll(".tab")[0])
+mostrarMenuPrincipal()
+}
+
+function mostrarMenuPrincipal(){
+document.getElementById("menuPrincipal").style.display="block"
+document.getElementById("workspace").style.display="none"
+const nombre=sessionStorage.getItem("sesion3d")||"Usuario"
+const el=document.getElementById("menuUserName")
+if(el) el.textContent=nombre.charAt(0)+nombre.slice(1).toLowerCase()
+}
+
+function irModulo(tab){
+mostrar(tab)
+window.scrollTo({top:0,behavior:"smooth"})
+}
+
+function tabPorId(tab){
+const map={calc:0,quotes:1,sales:2,portfolio:3,gastosTab:4,configTab:5}
+return document.querySelectorAll(".tab")[map[tab]]
 }
 
 function verificarSesion(){
 if(sessionStorage.getItem("sesion3d")){
 cerrarPantallaLogin()
+mostrarMenuPrincipal()
 return true
 }
 document.getElementById("loginScreen").style.display="flex"
@@ -1161,6 +1216,9 @@ cargarGastos()
 // UI
 function mostrar(tab,el){
 
+document.getElementById("menuPrincipal").style.display="none"
+document.getElementById("workspace").style.display="block"
+
 document.getElementById("calc").style.display="none"
 document.getElementById("quotes").style.display="none"
 document.getElementById("sales").style.display="none"
@@ -1170,8 +1228,11 @@ document.getElementById("configTab").style.display="none"
 
 document.getElementById(tab).style.display="block"
 
+const tabEl=el||tabPorId(tab)
+if(tabEl){
 document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"))
-el.classList.add("active")
+tabEl.classList.add("active")
+}
 
 if(tab=="quotes") cargarCot()
 if(tab=="sales") cargarVentas()
@@ -1188,7 +1249,7 @@ if(gastoFecha) gastoFecha.value=new Date().toISOString().split("T")[0]
 }catch(e){
 console.error(e)
 }
-if(verificarSesion()) mostrar("calc",document.querySelectorAll(".tab")[0])
+verificarSesion()
 }
 
 </script>
