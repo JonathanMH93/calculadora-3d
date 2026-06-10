@@ -64,6 +64,9 @@ img{max-width:150px;border-radius:8px;margin-top:10px}
 .menu-icon{font-size:32px;line-height:1;display:block;margin-bottom:10px}
 .menu-label{font-size:13px;font-weight:500;color:#e2e8f0}
 .btn-menu-principal{background:#334155;margin:0 0 16px;padding:10px 16px;font-size:13px}
+.link-publico{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
+.link-publico input{flex:1;min-width:180px;margin:0;font-size:12px;color:#94a3b8}
+.link-publico button{margin:0;flex-shrink:0}
 .tabs-legacy{display:none!important}
 @media(max-width:520px){.menu-grid{grid-template-columns:repeat(2,1fr)}}
 </style>
@@ -209,6 +212,16 @@ img{max-width:150px;border-radius:8px;margin-top:10px}
 
 <!-- PORTAFOLIO -->
 <div id="portfolio" style="display:none">
+
+<div class="card">
+<b>🔗 Portafolio público</b>
+<p style="margin:8px 0;font-size:13px;color:#94a3b8">Comparte este enlace con clientes. No requiere login.</p>
+<div class="link-publico">
+<input id="linkPortafolioPublico" type="text" readonly>
+<button type="button" onclick="copiarLinkPortafolio()">Copiar</button>
+<button type="button" onclick="abrirPortafolioPublico()">Ver</button>
+</div>
+</div>
 
 <div class="card">
 <input type="hidden" id="portId">
@@ -857,6 +870,30 @@ cargarVentas()
 
 // ===== PORTAFOLIO =====
 
+function urlPortafolioPublico(){
+const u=new URL(location.href)
+u.pathname=u.pathname.replace(/[^/]*$/,"portafolio-publico.html")
+u.search=""
+u.hash=""
+return u.href
+}
+
+function actualizarLinkPortafolioPublico(){
+const inp=document.getElementById("linkPortafolioPublico")
+if(inp) inp.value=urlPortafolioPublico()
+}
+
+function copiarLinkPortafolio(){
+const url=urlPortafolioPublico()
+if(navigator.clipboard){
+navigator.clipboard.writeText(url).then(()=>alert("Enlace copiado")).catch(()=>prompt("Copia este enlace:",url))
+}else prompt("Copia este enlace:",url)
+}
+
+function abrirPortafolioPublico(){
+window.open(urlPortafolioPublico(),"_blank")
+}
+
 function escapeHtml(s){
 return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")
 }
@@ -993,6 +1030,7 @@ async function cargarPortafolio(){
 
 try{
 await esperarFirebase()
+actualizarLinkPortafolioPublico()
 let snap=await getDocs(collection(db,"portafolio"))
 portafolioCache=[]
 listaPortafolio.innerHTML=""
