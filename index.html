@@ -348,6 +348,10 @@ img{max-width:150px;border-radius:8px;margin-top:10px}
 
 <!-- CONFIG -->
 <div id="configTab" style="display:none">
+<div class="card" id="configAvisoInicial" style="display:none;border:1px solid #fbbf24;background:#422006">
+<b>⚠️ Configuración inicial requerida</b>
+<p style="margin:8px 0 0;font-size:13px;color:#fde68a">Complete todos los valores y pulse Guardar para empezar a cotizar con sus propios precios.</p>
+</div>
 <div class="card">
 
 <label>Costo kg</label>
@@ -444,15 +448,31 @@ window.dispatchEvent(new Event("firebase-ready"));
 
 <script>
 
-let configData={costoKg:20,extraFil:20,extraTime:10,costoHora:0.23,costoEnergia:0.2,porcentajeGanancia:60}
+const CREDENCIALES={usuario:"JONATHAN",clave:"JACHAMORRO"}
+const CONFIG_DEFAULTS={costoKg:0,extraFil:0,extraTime:0,costoHora:0,costoEnergia:0,porcentajeGanancia:0}
+let configData={...CONFIG_DEFAULTS}
 let ultima={}
 let cotizacionesCache=[]
 let ventasCache=[]
 let portafolioCache=[]
 let gastosCache=[]
 let filtroVenta="all"
-const CREDENCIALES={usuario:"JONATHAN",clave:"JACHAMORRO"}
+let necesitaConfiguracion=false
 let usuariosCache=[]
+
+function getUsuarioActual(){
+return sessionStorage.getItem("sesionUserId")||sessionStorage.getItem("sesion3d")||""
+}
+
+function perteneceAlUsuario(data){
+const u=getUsuarioActual()
+if(!data.usuario) return u===CREDENCIALES.usuario
+return data.usuario===u
+}
+
+function datosConUsuario(data){
+return{...data,usuario:getUsuarioActual()}
+}
 
 async function asegurarAdminFirebase(){
 const ref=doc(db,"usuarios",CREDENCIALES.usuario)
@@ -531,9 +551,18 @@ document.getElementById("loginScreen").style.display="none"
 document.getElementById("appShell").style.display="block"
 }
 
-function mostrarApp(){
+async function mostrarApp(){
 cerrarPantallaLogin()
-mostrarMenuPrincipal()
+await verificarConfigInicial()
+if(necesitaConfiguracion) mostrar("configTab")
+else mostrarMenuPrincipal()
+}
+
+async function verificarConfigInicial(){
+await cargarConfig()
+if(necesitaConfiguracion){
+alert("Bienvenido. Complete su configuración de precios antes de comenzar.")
+}
 }
 
 function mostrarMenuPrincipal(){
@@ -546,6 +575,12 @@ actualizarVisibilidadAdmin()
 }
 
 function irModulo(tab){
+if(necesitaConfiguracion&&tab!=="configTab"){
+alert("Primero complete su configuración de precios.")
+mostrar("configTab")
+window.scrollTo({top:0,behavior:"smooth"})
+return
+}
 mostrar(tab)
 window.scrollTo({top:0,behavior:"smooth"})
 }
@@ -616,14 +651,42 @@ return dataUrl
 }
 
 // CONFIG
+function actualizarAvisoConfig(){
+const aviso=document.getElementById("configAvisoInicial")
+if(aviso) aviso.style.display=necesitaConfiguracion?"block":"none"
+}
+
+async function migrarConfigAdmin(){
+const userId=CREDENCIALES.usuario
+const userRef=doc(db,"config",userId)
+const userSnap=await getDoc(userRef)
+if(userSnap.exists()) return
+
+const legacy=await getDoc(doc(db,"config","default"))
+if(legacy.exists()){
+await setDoc(userRef,{...legacy.data(),configurado:true,usuario:userId})
+}
+}
+
 async function cargarConfig(){
 try{
 await esperarFirebase()
-let ref=doc(db,"config","default")
-let snap=await getDoc(ref)
+const userId=getUsuarioActual()
+if(!userId) return
 
-if(snap.exists()) configData={...configData,...snap.data()}
-else await setDoc(ref,configData)
+if(userId===CREDENCIALES.usuario) await migrarConfigAdmin()
+
+const ref=doc(db,"config",userId)
+const snap=await getDoc(ref)
+
+if(snap.exists()){
+configData={...CONFIG_DEFAULTS,...snap.data()}
+necesitaConfiguracion=!snap.data().configurado
+}else{
+configData={...CONFIG_DEFAULTS}
+necesitaConfiguracion=true
+await setDoc(ref,{...configData,configurado:false,usuario:userId})
+}
 
 costoKg.value=configData.costoKg
 extraFil.value=configData.extraFil
@@ -631,12 +694,16 @@ extraTime.value=configData.extraTime
 costoHora.value=configData.costoHora
 costoEnergia.value=configData.costoEnergia
 porcentajeGanancia.value=configData.porcentajeGanancia
+actualizarAvisoConfig()
 }catch(e){alert(mensajeFirebaseError(e))}
 }
 
 async function guardarConfig(){
 try{
 await esperarFirebase()
+const userId=getUsuarioActual()
+if(!userId) return
+
 configData={
 costoKg:+costoKg.value||0,
 extraFil:+extraFil.value||0,
@@ -645,7 +712,13 @@ costoHora:+costoHora.value||0,
 costoEnergia:+costoEnergia.value||0,
 porcentajeGanancia:+porcentajeGanancia.value||0
 }
-await setDoc(doc(db,"config","default"),configData)
+if(necesitaConfiguracion){
+if(configData.costoKg<=0) return alert("Ingrese el costo del filamento (costo kg)")
+if(configData.porcentajeGanancia<=0) return alert("Ingrese el porcentaje de ganancia")
+}
+await setDoc(doc(db,"config",userId),{...configData,configurado:true,usuario:userId})
+necesitaConfiguracion=false
+actualizarAvisoConfig()
 alert("Configuración guardada")
 }catch(e){alert(mensajeFirebaseError(e))}
 }
@@ -748,14 +821,14 @@ let actual=cotizacionesCache.find(x=>x.id===cotId.value)
 imgData=actual?.img||""
 }
 
-let data={
+let data=datosConUsuario({
 ...ultima,
 desc:desc.value,
 link:link.value,
 obs:obs.value,
 img:imgData,
 total:Number(ultima.total.toFixed(2))
-}
+})
 
 if(cotId.value){
 await updateDoc(doc(db,"cotizaciones",cotId.value),data)
@@ -781,6 +854,7 @@ let html=""
 
 snap.forEach(d=>{
 let c={id:d.id,...d.data()}
+if(!perteneceAlUsuario(c)) return
 cotizacionesCache.push(c)
 
 html+=`
@@ -912,13 +986,13 @@ let fechaVal = fechaVenta.value
   ? new Date(fechaVenta.value)
   : new Date()
 
-let data={
+let data=datosConUsuario({
 cliente:cliente.value,
 precio:Number((+precio.value||0).toFixed(2)),
 figura:figura.value,
 pagado:pagado.checked,
 fecha:fechaVal
-}
+})
 
 if(ventaId.value){
 await updateDoc(doc(db,"ventas",ventaId.value),data)
@@ -953,6 +1027,7 @@ let html=""
 
 snap.forEach(d=>{
 let v={id:d.id,...d.data()}
+if(!perteneceAlUsuario(v)) return
 ventasCache.push(v)
 
 if(filtroVenta==="pagado" && !v.pagado) return
@@ -1158,11 +1233,11 @@ imgData=actual?.img||""
 
 if(!imgData) return alert("Imagen requerida")
 
-let data={
+let data=datosConUsuario({
 nombre:portNombre.value.trim(),
 caracteristicas:portCaracteristicas.value.trim(),
 img:imgData
-}
+})
 
 if(portId.value){
 await updateDoc(doc(db,"portafolio",portId.value),data)
@@ -1236,6 +1311,7 @@ listaPortafolio.innerHTML=""
 
 snap.forEach(d=>{
 let p={id:d.id,...d.data()}
+if(!perteneceAlUsuario(p)) return
 portafolioCache.push(p)
 listaPortafolio.appendChild(crearTarjetaPortafolio(p))
 })
@@ -1326,14 +1402,14 @@ const precioUnit=Number((totalCompra/cantidad).toFixed(2))
 try{
 await esperarFirebase()
 
-const data={
+const data=datosConUsuario({
 concepto:gastoConcepto.value.trim(),
 fecha:new Date(gastoFecha.value),
 total:Number(totalCompra.toFixed(2)),
 cantidad:Number(cantidad.toFixed(2)),
 precio:precioUnit,
 notas:(gastoNotas.value||"").trim()
-}
+})
 
 if(gastoId.value){
 await updateDoc(doc(db,"gastos",gastoId.value),data)
@@ -1358,6 +1434,7 @@ try{
 const snap=await getDocs(collection(db,"ventas"))
 snap.forEach(d=>{
 const v=d.data()
+if(!perteneceAlUsuario(v)) return
 const p=Number(v.precio||0)
 ingresosTotales+=p
 if(v.pagado) ingresosPagados+=p
@@ -1393,6 +1470,7 @@ let totalGastos=0
 
 snap.forEach(d=>{
 const g={id:d.id,...d.data()}
+if(!perteneceAlUsuario(g)) return
 gastosCache.push(g)
 const sub=montoGasto(g)
 const unit=precioUnitarioGasto(g)
@@ -1582,6 +1660,12 @@ cargarSistemasTab()
 // UI
 function mostrar(tab,el){
 
+if(necesitaConfiguracion&&tab!=="configTab"){
+alert("Primero complete su configuración de precios.")
+tab="configTab"
+el=null
+}
+
 if(tab==="sistemasTab"&&!esAdminSesion()){
 alert("Solo el administrador puede acceder a Sistemas")
 return
@@ -1613,7 +1697,7 @@ if(tab=="quotes") cargarCot()
 if(tab=="sales") cargarVentas()
 if(tab=="portfolio") cargarPortafolio()
 if(tab=="gastosTab") cargarGastos()
-if(tab=="configTab") cargarConfig()
+if(tab=="configTab"){cargarConfig();actualizarAvisoConfig()}
 if(tab=="usuarioTab") cargarUsuarioTab()
 if(tab=="sistemasTab") cargarSistemasTab()
 }
@@ -1621,13 +1705,15 @@ if(tab=="sistemasTab") cargarSistemasTab()
 window.onload=async()=>{
 try{
 await esperarFirebase()
-await cargarConfig()
 if(gastoFecha) gastoFecha.value=new Date().toISOString().split("T")[0]
+if(verificarSesion()){
+await cargarConfig()
+actualizarVisibilidadAdmin()
+if(necesitaConfiguracion) mostrar("configTab")
+}
 }catch(e){
 console.error(e)
 }
-verificarSesion()
-actualizarVisibilidadAdmin()
 }
 
 </script>
