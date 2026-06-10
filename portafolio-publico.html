@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#2563eb">
+<title>Portafolio 3D</title>
+<style>
+*{box-sizing:border-box}
+body{font-family:Arial,Helvetica,sans-serif;background:#0f172a;color:#fff;margin:0;min-height:100vh}
+.header{text-align:center;padding:40px 20px 24px;background:linear-gradient(180deg,#1e293b 0%,#0f172a 100%);border-bottom:1px solid #334155}
+.header h1{margin:0;font-size:26px;font-weight:600}
+.header p{margin:10px 0 0;color:#94a3b8;font-size:15px}
+.container{max-width:1200px;margin:0 auto;padding:24px 20px 48px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:20px}
+.card{background:#1e293b;border-radius:14px;overflow:hidden;border:1px solid #334155;display:flex;flex-direction:column}
+.img-wrap{width:100%;min-height:160px;max-height:220px;display:flex;align-items:center;justify-content:center;background:#334155;padding:8px}
+.card img{width:100%;max-height:200px;object-fit:contain;display:block}
+.body{padding:14px;flex:1}
+.body h3{margin:0 0 8px;font-size:16px}
+.body ul{margin:0;padding-left:18px;font-size:13px;color:#cbd5e1;line-height:1.5}
+.empty,.loading,.error{text-align:center;color:#94a3b8;padding:48px 20px}
+.footer{text-align:center;padding:24px;color:#64748b;font-size:12px;border-top:1px solid #334155}
+@media(max-width:480px){.grid{grid-template-columns:repeat(2,1fr);gap:12px}}
+</style>
+</head>
+<body>
+
+<header class="header">
+<h1>Portafolio de impresión 3D</h1>
+<p>Catálogo de trabajos realizados</p>
+</header>
+
+<main class="container">
+<div id="estado" class="loading">Cargando portafolio…</div>
+<div id="grid" class="grid" style="display:none"></div>
+</main>
+
+<footer class="footer">Impresión 3D · Portafolio público</footer>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+apiKey:"AIzaSyClTMXXUlDDK0txPwr1Q5SFYkytC9RQvGA",
+authDomain:"calculadora-3d-876b3.firebaseapp.com",
+projectId:"calculadora-3d-876b3"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+function escapeHtml(s){
+return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")
+}
+
+function esImagenValida(src){
+return typeof src==="string"&&src.startsWith("data:image/")&&src.length>500
+}
+
+function renderCaracteristicas(texto){
+const items=String(texto||"").split("\n").map(l=>l.trim()).filter(Boolean)
+if(!items.length) return "<p style='margin:0;font-size:12px;color:#94a3b8'>Sin detalles</p>"
+return "<ul>"+items.map(i=>"<li>"+escapeHtml(i)+"</li>").join("")+"</ul>"
+}
+
+async function cargar(){
+const estado=document.getElementById("estado")
+const grid=document.getElementById("grid")
+
+try{
+const snap=await getDocs(collection(db,"portafolio"))
+if(snap.empty){
+estado.className="empty"
+estado.textContent="Aún no hay piezas en el portafolio."
+return
+}
+
+estado.style.display="none"
+grid.style.display="grid"
+
+snap.forEach(d=>{
+const p=d.data()
+const card=document.createElement("article")
+card.className="card"
+
+const wrap=document.createElement("div")
+wrap.className="img-wrap"
+if(esImagenValida(p.img)){
+const img=document.createElement("img")
+img.src=p.img
+img.alt=p.nombre||"Pieza"
+img.loading="lazy"
+wrap.appendChild(img)
+}
+
+const body=document.createElement("div")
+body.className="body"
+body.innerHTML=`<h3>${escapeHtml(p.nombre)}</h3>${renderCaracteristicas(p.caracteristicas)}`
+
+card.append(wrap,body)
+grid.appendChild(card)
+})
+
+}catch(e){
+estado.className="error"
+estado.textContent="No se pudo cargar el portafolio. Intenta más tarde."
+console.error(e)
+}
+}
+
+cargar()
+</script>
+
+</body>
+</html>
