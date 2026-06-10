@@ -68,6 +68,23 @@ img{max-width:150px;border-radius:8px;margin-top:10px}
 .link-publico input{flex:1;min-width:180px;margin:0;font-size:12px;color:#94a3b8}
 .link-publico button{margin:0;flex-shrink:0}
 .tabs-legacy{display:none!important}
+.app-layout{display:flex;min-height:100vh}
+.sidebar{width:220px;min-width:220px;background:#1e293b;border-right:1px solid #334155;display:flex;flex-direction:column;padding:16px 0;position:sticky;top:0;height:100vh;overflow-y:auto}
+.sidebar-brand{padding:0 16px 16px;font-size:14px;font-weight:600;color:#94a3b8;border-bottom:1px solid #334155;margin-bottom:8px}
+.sidebar-nav{flex:1;display:flex;flex-direction:column;gap:2px;padding:8px}
+.sidebar-nav button{width:100%;text-align:left;margin:0;padding:10px 14px;background:transparent;border:none;border-radius:8px;color:#cbd5e1;font-size:13px;cursor:pointer}
+.sidebar-nav button:hover{background:#334155}
+.sidebar-nav button.active{background:#2563eb;color:#fff}
+.sidebar-footer{padding:12px 16px;border-top:1px solid #334155;display:flex;flex-direction:column;gap:6px}
+.sidebar-footer button{width:100%;margin:0;padding:10px;font-size:13px}
+.main-content{flex:1;min-width:0;overflow-x:hidden}
+.main-content .container{max-width:100%;padding:16px 20px}
+.badge-admin{display:inline-block;background:#2563eb;color:#fff;font-size:11px;padding:2px 8px;border-radius:6px;margin-left:6px}
+@media(max-width:768px){
+.sidebar{width:64px;min-width:64px}
+.sidebar-brand,.sidebar-nav button span,.sidebar-footer button span{display:none}
+.sidebar-nav button,.sidebar-footer button{text-align:center;padding:12px 8px;font-size:18px}
+}
 @media(max-width:520px){.menu-grid{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
@@ -107,13 +124,33 @@ img{max-width:150px;border-radius:8px;margin-top:10px}
 <div class="menu-item" onclick="irModulo('portfolio')"><span class="menu-icon">🖼</span><span class="menu-label">Portafolio</span></div>
 <div class="menu-item" onclick="irModulo('gastosTab')"><span class="menu-icon">📉</span><span class="menu-label">Gastos</span></div>
 <div class="menu-item" onclick="irModulo('configTab')"><span class="menu-icon">⚙️</span><span class="menu-label">Configuración</span></div>
+<div class="menu-item" onclick="irModulo('usuarioTab')"><span class="menu-icon">👤</span><span class="menu-label">Usuario</span></div>
+<div class="menu-item" id="menuSistemas" onclick="irModulo('sistemasTab')" style="display:none"><span class="menu-icon">🛠</span><span class="menu-label">Sistemas</span></div>
 </div>
 </div>
 </div>
 
 <div id="workspace" style="display:none">
+<div class="app-layout">
+<aside class="sidebar">
+<div class="sidebar-brand">3D App PRO</div>
+<nav class="sidebar-nav">
+<button type="button" data-tab="calc" onclick="irModulo('calc')"><span>💰 Calcular</span></button>
+<button type="button" data-tab="quotes" onclick="irModulo('quotes')"><span>📦 Cotizaciones</span></button>
+<button type="button" data-tab="sales" onclick="irModulo('sales')"><span>💵 Ventas</span></button>
+<button type="button" data-tab="portfolio" onclick="irModulo('portfolio')"><span>🖼 Portafolio</span></button>
+<button type="button" data-tab="gastosTab" onclick="irModulo('gastosTab')"><span>📉 Gastos</span></button>
+<button type="button" data-tab="configTab" onclick="irModulo('configTab')"><span>⚙️ Config</span></button>
+<button type="button" data-tab="usuarioTab" onclick="irModulo('usuarioTab')"><span>👤 Usuario</span></button>
+<button type="button" data-tab="sistemasTab" id="navSistemas" onclick="irModulo('sistemasTab')" style="display:none"><span>🛠 Sistemas</span></button>
+</nav>
+<div class="sidebar-footer">
+<button type="button" onclick="mostrarMenuPrincipal()"><span>🏠 Menú principal</span></button>
+<button type="button" class="danger" onclick="cerrarSesion()"><span>Cerrar sesión</span></button>
+</div>
+</aside>
+<main class="main-content">
 <div class="container">
-<button type="button" class="btn-menu-principal" onclick="mostrarMenuPrincipal()">← Menú principal</button>
 
 <div class="tabs tabs-legacy">
 <div class="tab active" onclick="mostrar('calc',this)">💰 Calcular</div>
@@ -317,7 +354,46 @@ img{max-width:150px;border-radius:8px;margin-top:10px}
 </div>
 </div>
 
+<!-- USUARIO -->
+<div id="usuarioTab" style="display:none">
+<div class="card">
+<h3 style="margin:0 0 12px">Mi cuenta</h3>
+<label>Usuario</label>
+<input id="perfilUsuario" readonly>
+<label>Nombre</label>
+<input id="perfilNombre" placeholder="Tu nombre">
+<button onclick="guardarPerfilUsuario()">Guardar nombre</button>
 </div>
+<div class="card">
+<h3 style="margin:0 0 12px">Cambiar contraseña</h3>
+<label>Contraseña actual</label>
+<input id="perfilClaveActual" type="password" autocomplete="current-password">
+<label>Nueva contraseña</label>
+<input id="perfilClaveNueva" type="password" autocomplete="new-password">
+<label>Confirmar nueva contraseña</label>
+<input id="perfilClaveConfirm" type="password" autocomplete="new-password">
+<button onclick="cambiarClaveUsuario()">Actualizar contraseña</button>
+</div>
+</div>
+
+<!-- SISTEMAS (solo administrador) -->
+<div id="sistemasTab" style="display:none">
+<div class="card">
+<h3 style="margin:0 0 12px">Crear usuario <span class="badge-admin">Admin</span></h3>
+<p style="color:#94a3b8;font-size:13px;margin:0 0 12px">Los nuevos usuarios podrán iniciar sesión y usar la app con sus propios datos.</p>
+<label>Usuario nuevo</label>
+<input id="nuevoUsuario" placeholder="Ej: MARIA">
+<label>Contraseña</label>
+<input id="nuevaClave" type="password" placeholder="Mínimo 4 caracteres">
+<label>Nombre</label>
+<input id="nuevoNombre" placeholder="Nombre completo">
+<button onclick="crearUsuarioSistema()">Crear usuario</button>
+</div>
+<div id="listaUsuarios"></div>
+</div>
+
+</div>
+</main>
 </div>
 </div>
 
@@ -357,19 +433,78 @@ let portafolioCache=[]
 let gastosCache=[]
 let filtroVenta="all"
 const CREDENCIALES={usuario:"JONATHAN",clave:"JACHAMORRO"}
+let usuariosCache=[]
 
-function iniciarSesion(){
+async function asegurarAdminFirebase(){
+const ref=doc(db,"usuarios",CREDENCIALES.usuario)
+const snap=await getDoc(ref)
+if(!snap.exists()){
+await setDoc(ref,{usuario:CREDENCIALES.usuario,clave:CREDENCIALES.clave,admin:true,nombre:"Jonathan"})
+}
+}
+
+function esAdminSesion(){
+return sessionStorage.getItem("sesionAdmin")==="1"
+}
+
+function actualizarVisibilidadAdmin(){
+const show=esAdminSesion()?"block":"none"
+const nav=document.getElementById("navSistemas")
+const menu=document.getElementById("menuSistemas")
+if(nav) nav.style.display=show
+if(menu) menu.style.display=show
+}
+
+function iniciarSesionOk(user,esAdmin){
+sessionStorage.setItem("sesion3d",user)
+sessionStorage.setItem("sesionUserId",user)
+sessionStorage.setItem("sesionAdmin",esAdmin?"1":"0")
+loginError.textContent=""
+mostrarApp()
+}
+
+async function iniciarSesion(){
 const user=(loginUser.value||"").trim().toUpperCase()
 const pass=(loginPass.value||"").trim().toUpperCase()
 const err=document.getElementById("loginError")
+if(!user||!pass){err.textContent="Complete usuario y contraseña";return}
 
-if(user!==CREDENCIALES.usuario||pass!==CREDENCIALES.clave){
+try{
+await esperarFirebase()
+await asegurarAdminFirebase()
+
+const ref=doc(db,"usuarios",user)
+const snap=await getDoc(ref)
+
+if(snap.exists()){
+const u=snap.data()
+if((u.clave||"").toUpperCase()!==pass){
 err.textContent="Usuario o contraseña incorrectos"
 return
 }
+iniciarSesionOk(user,!!u.admin)
+return
+}
 
-sessionStorage.setItem("sesion3d",user)
-mostrarApp()
+if(user===CREDENCIALES.usuario&&pass===CREDENCIALES.clave){
+await setDoc(ref,{usuario:user,clave:pass,admin:true,nombre:"Jonathan"})
+iniciarSesionOk(user,true)
+return
+}
+
+err.textContent="Usuario o contraseña incorrectos"
+}catch(e){err.textContent=mensajeFirebaseError(e)}
+}
+
+function cerrarSesion(){
+sessionStorage.removeItem("sesion3d")
+sessionStorage.removeItem("sesionAdmin")
+sessionStorage.removeItem("sesionUserId")
+document.getElementById("loginScreen").style.display="flex"
+document.getElementById("appShell").style.display="none"
+loginUser.value=""
+loginPass.value=""
+loginError.textContent=""
 }
 
 function cerrarPantallaLogin(){
@@ -388,6 +523,7 @@ document.getElementById("workspace").style.display="none"
 const nombre=sessionStorage.getItem("sesion3d")||"Usuario"
 const el=document.getElementById("menuUserName")
 if(el) el.textContent=nombre.charAt(0)+nombre.slice(1).toLowerCase()
+actualizarVisibilidadAdmin()
 }
 
 function irModulo(tab){
@@ -398,6 +534,12 @@ window.scrollTo({top:0,behavior:"smooth"})
 function tabPorId(tab){
 const map={calc:0,quotes:1,sales:2,portfolio:3,gastosTab:4,configTab:5}
 return document.querySelectorAll(".tab")[map[tab]]
+}
+
+function actualizarSidebarActivo(tab){
+document.querySelectorAll(".sidebar-nav button[data-tab]").forEach(b=>{
+b.classList.toggle("active",b.dataset.tab===tab)
+})
 }
 
 function verificarSesion(){
@@ -1251,11 +1393,146 @@ cargarGastos()
 }catch(e){alert(mensajeFirebaseError(e))}
 }
 
+// ===== USUARIO / SISTEMAS =====
+
+async function cargarUsuarioTab(){
+const uid=sessionStorage.getItem("sesionUserId")||sessionStorage.getItem("sesion3d")
+if(!uid) return
+
+try{
+await esperarFirebase()
+const snap=await getDoc(doc(db,"usuarios",uid))
+const u=snap.exists()?snap.data():{usuario:uid,nombre:uid}
+perfilUsuario.value=u.usuario||uid
+perfilNombre.value=u.nombre||""
+perfilClaveActual.value=""
+perfilClaveNueva.value=""
+perfilClaveConfirm.value=""
+}catch(e){alert(mensajeFirebaseError(e))}
+}
+
+async function guardarPerfilUsuario(){
+const uid=sessionStorage.getItem("sesionUserId")
+if(!uid) return
+
+try{
+await esperarFirebase()
+const ref=doc(db,"usuarios",uid)
+const snap=await getDoc(ref)
+if(!snap.exists()) return alert("Usuario no encontrado")
+await updateDoc(ref,{nombre:(perfilNombre.value||"").trim()})
+alert("Nombre actualizado")
+}catch(e){alert(mensajeFirebaseError(e))}
+}
+
+async function cambiarClaveUsuario(){
+const uid=sessionStorage.getItem("sesionUserId")
+if(!uid) return
+
+const actual=(perfilClaveActual.value||"").trim().toUpperCase()
+const nueva=(perfilClaveNueva.value||"").trim().toUpperCase()
+const conf=(perfilClaveConfirm.value||"").trim().toUpperCase()
+
+if(!actual||!nueva) return alert("Complete todos los campos")
+if(nueva.length<4) return alert("La nueva contraseña debe tener al menos 4 caracteres")
+if(nueva!==conf) return alert("Las contraseñas nuevas no coinciden")
+
+try{
+await esperarFirebase()
+const ref=doc(db,"usuarios",uid)
+const snap=await getDoc(ref)
+if(!snap.exists()) return alert("Usuario no encontrado")
+
+const u=snap.data()
+if((u.clave||"").toUpperCase()!==actual) return alert("Contraseña actual incorrecta")
+
+await updateDoc(ref,{clave:nueva})
+perfilClaveActual.value=""
+perfilClaveNueva.value=""
+perfilClaveConfirm.value=""
+alert("Contraseña actualizada")
+}catch(e){alert(mensajeFirebaseError(e))}
+}
+
+async function crearUsuarioSistema(){
+if(!esAdminSesion()) return alert("Solo el administrador puede crear usuarios")
+
+const usuario=(nuevoUsuario.value||"").trim().toUpperCase()
+const clave=(nuevaClave.value||"").trim().toUpperCase()
+const nombre=(nuevoNombre.value||"").trim()
+
+if(!usuario||!clave) return alert("Usuario y contraseña requeridos")
+if(clave.length<4) return alert("Mínimo 4 caracteres en la contraseña")
+
+try{
+await esperarFirebase()
+const ref=doc(db,"usuarios",usuario)
+const existe=await getDoc(ref)
+if(existe.exists()) return alert("Ese usuario ya existe")
+
+await setDoc(ref,{usuario,clave,nombre:nombre||usuario,admin:false,creado:new Date()})
+nuevoUsuario.value=""
+nuevaClave.value=""
+nuevoNombre.value=""
+alert("Usuario creado")
+cargarSistemasTab()
+}catch(e){alert(mensajeFirebaseError(e))}
+}
+
+async function cargarSistemasTab(){
+if(!esAdminSesion()){
+listaUsuarios.innerHTML="<p style='color:#94a3b8'>Acceso solo para administrador.</p>"
+return
+}
+
+try{
+await esperarFirebase()
+const snap=await getDocs(collection(db,"usuarios"))
+usuariosCache=[]
+let html=""
+
+snap.forEach(d=>{
+const u={id:d.id,...d.data()}
+usuariosCache.push(u)
+
+html+=`
+<div class="card line">
+<div>
+<b>${escapeHtml(u.usuario)}</b>
+${u.admin?'<span class="badge-admin">Admin</span>':""}<br>
+<span style="color:#94a3b8;font-size:13px">${escapeHtml(u.nombre||"-")}</span>
+</div>
+${u.admin?"":"<button class='danger' onclick=\"eliminarUsuarioSistema('"+u.id+"')\">🗑</button>"}
+</div>`
+})
+
+listaUsuarios.innerHTML=html||"<p style='color:#94a3b8'>No hay usuarios adicionales.</p>"
+}catch(e){alert(mensajeFirebaseError(e))}
+}
+
+async function eliminarUsuarioSistema(id){
+if(!esAdminSesion()) return
+if(id===CREDENCIALES.usuario) return alert("No puede eliminar al administrador principal")
+if(!confirm("¿Eliminar este usuario?")) return
+
+try{
+await esperarFirebase()
+await deleteDoc(doc(db,"usuarios",id))
+cargarSistemasTab()
+}catch(e){alert(mensajeFirebaseError(e))}
+}
+
 // UI
 function mostrar(tab,el){
 
+if(tab==="sistemasTab"&&!esAdminSesion()){
+alert("Solo el administrador puede acceder a Sistemas")
+return
+}
+
 document.getElementById("menuPrincipal").style.display="none"
 document.getElementById("workspace").style.display="block"
+actualizarVisibilidadAdmin()
 
 document.getElementById("calc").style.display="none"
 document.getElementById("quotes").style.display="none"
@@ -1263,8 +1540,11 @@ document.getElementById("sales").style.display="none"
 document.getElementById("portfolio").style.display="none"
 document.getElementById("gastosTab").style.display="none"
 document.getElementById("configTab").style.display="none"
+document.getElementById("usuarioTab").style.display="none"
+document.getElementById("sistemasTab").style.display="none"
 
 document.getElementById(tab).style.display="block"
+actualizarSidebarActivo(tab)
 
 const tabEl=el||tabPorId(tab)
 if(tabEl){
@@ -1277,6 +1557,8 @@ if(tab=="sales") cargarVentas()
 if(tab=="portfolio") cargarPortafolio()
 if(tab=="gastosTab") cargarGastos()
 if(tab=="configTab") cargarConfig()
+if(tab=="usuarioTab") cargarUsuarioTab()
+if(tab=="sistemasTab") cargarSistemasTab()
 }
 
 window.onload=async()=>{
@@ -1288,6 +1570,7 @@ if(gastoFecha) gastoFecha.value=new Date().toISOString().split("T")[0]
 console.error(e)
 }
 verificarSesion()
+actualizarVisibilidadAdmin()
 }
 
 </script>
