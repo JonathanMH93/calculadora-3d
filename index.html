@@ -43,11 +43,38 @@ button.danger{background:#dc2626}
 .gasto-total-line{color:#fbbf24;font-size:13px}
 img{max-width:150px;border-radius:8px;margin-top:10px}
 .detalle-img{max-width:min(100%,220px);max-height:200px;width:auto;height:auto;object-fit:contain;margin-top:10px;border-radius:8px;display:block;background:#334155}
+#loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:linear-gradient(145deg,#0f172a 0%,#1e293b 50%,#0f172a 100%)}
+.login-card{width:100%;max-width:400px;background:#1e293b;border-radius:16px;padding:32px 28px;box-shadow:0 20px 50px rgba(0,0,0,.4);border:1px solid #334155}
+.login-brand{text-align:center;margin-bottom:28px}
+.login-brand h1{margin:0;font-size:22px;font-weight:600;letter-spacing:.5px}
+.login-brand p{margin:8px 0 0;font-size:13px;color:#94a3b8}
+.login-card label{font-size:12px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px}
+.login-card input{margin-top:4px;margin-bottom:14px}
+.login-btn{width:100%;margin-top:8px;padding:14px;font-size:15px;font-weight:600}
+.login-error{color:#f87171;font-size:13px;text-align:center;min-height:20px;margin-top:8px}
+#appShell{display:none}
 </style>
 </head>
 
 <body>
 
+<!-- PASO 1: LOGIN -->
+<div id="loginScreen">
+<div class="login-card">
+<div class="login-brand">
+<h1>3D App PRO</h1>
+<p>Sistema de gestión empresarial</p>
+</div>
+<label>Usuario</label>
+<input id="loginUser" type="text" autocomplete="username" placeholder="Ingrese su usuario">
+<label>Contraseña</label>
+<input id="loginPass" type="password" autocomplete="current-password" placeholder="Ingrese su contraseña">
+<button class="login-btn" onclick="iniciarSesion()">Ingresar</button>
+<p id="loginError" class="login-error"></p>
+</div>
+</div>
+
+<div id="appShell">
 <div class="container">
 
 <div class="tabs">
@@ -243,6 +270,7 @@ img{max-width:150px;border-radius:8px;margin-top:10px}
 </div>
 
 </div>
+</div>
 
 <!-- FIREBASE -->
 <script type="module">
@@ -279,6 +307,48 @@ let ventasCache=[]
 let portafolioCache=[]
 let gastosCache=[]
 let filtroVenta="all"
+const CREDENCIALES={usuario:"JONATHAN",clave:"JACHAMORRO"}
+
+function iniciarSesion(){
+const user=(loginUser.value||"").trim().toUpperCase()
+const pass=(loginPass.value||"").trim().toUpperCase()
+const err=document.getElementById("loginError")
+
+if(user!==CREDENCIALES.usuario||pass!==CREDENCIALES.clave){
+err.textContent="Usuario o contraseña incorrectos"
+return
+}
+
+sessionStorage.setItem("sesion3d",user)
+mostrarApp()
+}
+
+function cerrarPantallaLogin(){
+document.getElementById("loginScreen").style.display="none"
+document.getElementById("appShell").style.display="block"
+}
+
+function mostrarApp(){
+cerrarPantallaLogin()
+mostrar("calc",document.querySelectorAll(".tab")[0])
+}
+
+function verificarSesion(){
+if(sessionStorage.getItem("sesion3d")){
+cerrarPantallaLogin()
+return true
+}
+document.getElementById("loginScreen").style.display="flex"
+document.getElementById("appShell").style.display="none"
+return false
+}
+
+document.addEventListener("keydown",e=>{
+if(e.key==="Enter"&&document.getElementById("loginScreen").style.display!=="none"){
+const t=e.target
+if(t===loginUser||t===loginPass) iniciarSesion()
+}
+})
 
 function esperarFirebase(){
 return new Promise((resolve,reject)=>{
@@ -1118,7 +1188,7 @@ if(gastoFecha) gastoFecha.value=new Date().toISOString().split("T")[0]
 }catch(e){
 console.error(e)
 }
-mostrar("calc",document.querySelectorAll(".tab")[0])
+if(verificarSesion()) mostrar("calc",document.querySelectorAll(".tab")[0])
 }
 
 </script>
