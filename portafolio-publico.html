@@ -27,8 +27,8 @@ body{font-family:Arial,Helvetica,sans-serif;background:#0f172a;color:#fff;margin
 <body>
 
 <header class="header">
-<h1>Portafolio de impresión 3D</h1>
-<p>Catálogo de trabajos realizados</p>
+<h1 id="tituloPortafolio">Portafolio de impresión 3D</h1>
+<p id="subtituloPortafolio">Catálogo de trabajos realizados</p>
 </header>
 
 <main class="container">
@@ -48,6 +48,8 @@ authDomain:"calculadora-3d-876b3.firebaseapp.com",
 projectId:"calculadora-3d-876b3"
 };
 
+const USUARIO_LEGACY="JONATHAN";
+
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
@@ -65,23 +67,57 @@ if(!items.length) return "<p style='margin:0;font-size:12px;color:#94a3b8'>Sin d
 return "<ul>"+items.map(i=>"<li>"+escapeHtml(i)+"</li>").join("")+"</ul>"
 }
 
+function nombreVisible(usuario){
+if(!usuario) return ""
+return usuario.charAt(0)+usuario.slice(1).toLowerCase()
+}
+
+function perteneceAlPortafolio(data,usuario){
+if(!usuario) return false
+if(!data.usuario) return usuario===USUARIO_LEGACY
+return data.usuario===usuario
+}
+
+function obtenerUsuarioEnlace(){
+const raw=new URLSearchParams(location.search).get("u")
+return raw?raw.trim().toUpperCase():""
+}
+
 async function cargar(){
 const estado=document.getElementById("estado")
 const grid=document.getElementById("grid")
+const titulo=document.getElementById("tituloPortafolio")
+const subtitulo=document.getElementById("subtituloPortafolio")
+const usuario=obtenerUsuarioEnlace()
+
+if(!usuario){
+estado.className="error"
+estado.textContent="Enlace no válido. Obtén tu enlace personal desde la app (pestaña Portafolio)."
+return
+}
+
+titulo.textContent="Portafolio de "+nombreVisible(usuario)
+subtitulo.textContent="Catálogo personal de impresión 3D"
 
 try{
 const snap=await getDocs(collection(db,"portafolio"))
-if(snap.empty){
+const piezas=[]
+
+snap.forEach(d=>{
+const p=d.data()
+if(perteneceAlPortafolio(p,usuario)) piezas.push(p)
+})
+
+if(!piezas.length){
 estado.className="empty"
-estado.textContent="Aún no hay piezas en el portafolio."
+estado.textContent="Aún no hay piezas en este portafolio."
 return
 }
 
 estado.style.display="none"
 grid.style.display="grid"
 
-snap.forEach(d=>{
-const p=d.data()
+piezas.forEach(p=>{
 const card=document.createElement("article")
 card.className="card"
 
