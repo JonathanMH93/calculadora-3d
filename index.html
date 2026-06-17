@@ -271,7 +271,7 @@ img{max-width:150px;border-radius:8px;margin-top:10px}
 
 <div class="card">
 <b>🔗 Portafolio público</b>
-<p style="margin:8px 0;font-size:13px;color:#94a3b8">Comparte este enlace con clientes. No requiere login.</p>
+<p style="margin:8px 0;font-size:13px;color:#94a3b8">Tu enlace personal. Solo muestra tus diseños; compártelo con clientes sin login.</p>
 <div class="link-publico">
 <input id="linkPortafolioPublico" type="text" readonly>
 <button type="button" onclick="copiarLinkPortafolio()">Copiar</button>
@@ -1147,7 +1147,8 @@ cargarVentas()
 function urlPortafolioPublico(){
 const u=new URL(location.href)
 u.pathname=u.pathname.replace(/[^/]*$/,"portafolio-publico.html")
-u.search=""
+const userId=getUsuarioActual()
+u.search=userId?"u="+encodeURIComponent(userId):""
 u.hash=""
 return u.href
 }
