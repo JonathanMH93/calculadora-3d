@@ -390,9 +390,27 @@ img{max-width:150px;border-radius:8px;margin-top:10px}
 <h3 style="margin:0 0 12px">Mi cuenta</h3>
 <label>Usuario</label>
 <input id="perfilUsuario" readonly>
-<label>Nombre</label>
-<input id="perfilNombre" placeholder="Tu nombre">
-<button onclick="guardarPerfilUsuario()">Guardar nombre</button>
+<label>Nombre del vendedor / negocio</label>
+<input id="perfilNombre" placeholder="Ej: Jonathan 3D Print">
+
+<label>Banco</label>
+<input id="perfilBanco" placeholder="Ej: Banco Pichincha">
+
+<label>Tipo de cuenta</label>
+<input id="perfilTipoCuenta" placeholder="Ej: Ahorros">
+
+<label>Número de cuenta</label>
+<input id="perfilNumeroCuenta" placeholder="Ej: 2200000000">
+
+<label>Nombre de la cuenta</label>
+<input id="perfilNombreCuenta" placeholder="Ej: María Pérez">
+
+<label>QR de pago</label>
+<input type="file" id="perfilQrPago" accept="image/*">
+<input type="hidden" id="perfilQrPagoData">
+<img id="perfilQrPreview" class="img-preview" style="display:none" alt="QR de pago">
+
+<button onclick="guardarPerfilUsuario()">Guardar datos</button>
 </div>
 <div class="card">
 <h3 style="margin:0 0 12px">Cambiar contraseña</h3>
@@ -1653,6 +1671,20 @@ cargarGastos()
 
 // ===== USUARIO / SISTEMAS =====
 
+
+// Preview y guardado temporal del QR de pago en la pestaña Usuario
+if(document.getElementById("perfilQrPago")){
+perfilQrPago.addEventListener("change", async()=>{
+if(!perfilQrPago.files[0]) return
+try{
+const img=await imagenParaGuardar(perfilQrPago.files[0])
+perfilQrPagoData.value=img
+perfilQrPreview.src=img
+perfilQrPreview.style.display="block"
+}catch(e){alert(mensajeFirebaseError(e))}
+})
+}
+
 async function cargarUsuarioTab(){
 const uid=sessionStorage.getItem("sesionUserId")||sessionStorage.getItem("sesion3d")
 if(!uid) return
@@ -1661,8 +1693,26 @@ try{
 await esperarFirebase()
 const snap=await getDoc(doc(db,"usuarios",uid))
 const u=snap.exists()?snap.data():{usuario:uid,nombre:uid}
+
 perfilUsuario.value=u.usuario||uid
 perfilNombre.value=u.nombre||""
+
+if(document.getElementById("perfilBanco")) perfilBanco.value=u.banco||""
+if(document.getElementById("perfilTipoCuenta")) perfilTipoCuenta.value=u.tipoCuenta||"Ahorros"
+if(document.getElementById("perfilNumeroCuenta")) perfilNumeroCuenta.value=u.numeroCuenta||""
+if(document.getElementById("perfilNombreCuenta")) perfilNombreCuenta.value=u.nombreCuenta||""
+if(document.getElementById("perfilQrPagoData")) perfilQrPagoData.value=u.qrPago||""
+
+if(document.getElementById("perfilQrPreview")){
+if(esImagenValida(u.qrPago)){
+perfilQrPreview.src=u.qrPago
+perfilQrPreview.style.display="block"
+}else{
+perfilQrPreview.src=""
+perfilQrPreview.style.display="none"
+}
+}
+
 perfilClaveActual.value=""
 perfilClaveNueva.value=""
 perfilClaveConfirm.value=""
@@ -1678,8 +1728,17 @@ await esperarFirebase()
 const ref=doc(db,"usuarios",uid)
 const snap=await getDoc(ref)
 if(!snap.exists()) return alert("Usuario no encontrado")
-await updateDoc(ref,{nombre:(perfilNombre.value||"").trim()})
-alert("Nombre actualizado")
+
+await updateDoc(ref,{
+nombre:(perfilNombre.value||"").trim(),
+banco:(perfilBanco.value||"").trim(),
+tipoCuenta:(perfilTipoCuenta.value||"Ahorros").trim(),
+numeroCuenta:(perfilNumeroCuenta.value||"").trim(),
+nombreCuenta:(perfilNombreCuenta.value||"").trim(),
+qrPago:(perfilQrPagoData.value||"")
+})
+
+alert("Datos de usuario y pago actualizados")
 }catch(e){alert(mensajeFirebaseError(e))}
 }
 
