@@ -1304,98 +1304,137 @@ canvas.width=1080
 canvas.height=1350
 const ctx=canvas.getContext("2d")
 
-// Fondo
-ctx.fillStyle="#0f172a"
+// Fondo general más suave
+ctx.fillStyle="#f1f5f9"
 ctx.fillRect(0,0,canvas.width,canvas.height)
 
-// Tarjeta
+// Tarjeta principal
 ctx.fillStyle="#ffffff"
 ctx.roundRect(70,70,940,1210,40)
 ctx.fill()
 
-// Encabezado
-ctx.fillStyle="#2563eb"
-ctx.roundRect(70,70,940,190,40)
+// Encabezado más elegante y menos fuerte
+ctx.fillStyle="#1e293b"
+ctx.roundRect(70,70,940,170,40)
 ctx.fill()
+
 ctx.fillStyle="#ffffff"
-ctx.font="bold 54px Arial"
-ctx.fillText("Datos de pago",120,155)
-ctx.font="28px Arial"
-ctx.fillText("Comparte esta imagen con tu cliente",120,205)
+ctx.font="bold 48px Arial"
+ctx.textAlign="center"
+ctx.fillText("INFORMACIÓN PARA TRANSFERENCIA",540,168)
+ctx.textAlign="left"
 
-// Datos venta
-ctx.fillStyle="#0f172a"
+// Bloque detalle de venta con fondo claro para que no se opaque
+ctx.fillStyle="#f8fafc"
+ctx.roundRect(120,300,840,365,28)
+ctx.fill()
+
+ctx.fillStyle="#1e293b"
 ctx.font="bold 38px Arial"
-ctx.fillText("Detalle de la venta",120,330)
-ctx.font="30px Arial"
-ctx.fillStyle="#334155"
-ctx.fillText("Cliente",120,390)
-ctx.fillStyle="#0f172a"
-ctx.font="bold 36px Arial"
-textoMultilinea(ctx,v.cliente||"-",120,435,820,44)
+ctx.fillText("Detalle de la venta",155,365)
 
-ctx.font="30px Arial"
-ctx.fillStyle="#334155"
-ctx.fillText("Producto",120,535)
+// Cliente
+ctx.font="bold 25px Arial"
+ctx.fillStyle="#475569"
+ctx.fillText("Cliente",155,425)
+
 ctx.fillStyle="#0f172a"
 ctx.font="bold 34px Arial"
-textoMultilinea(ctx,v.figura||"-",120,580,820,42)
+textoMultilinea(ctx,v.cliente||"-",155,470,760,40)
+
+// Producto
+ctx.font="bold 25px Arial"
+ctx.fillStyle="#475569"
+ctx.fillText("Producto",155,540)
+
+ctx.fillStyle="#0f172a"
+ctx.font="bold 32px Arial"
+textoMultilinea(ctx,v.figura||"-",155,585,760,38)
+
+// Valor a pagar destacado
+ctx.fillStyle="#dcfce7"
+ctx.roundRect(120,705,840,170,28)
+ctx.fill()
+
+ctx.fillStyle="#166534"
+ctx.font="bold 28px Arial"
+ctx.textAlign="center"
+ctx.fillText("VALOR A PAGAR",540,765)
 
 ctx.fillStyle="#16a34a"
-ctx.font="bold 64px Arial"
-ctx.fillText("$"+Number(v.precio||0).toFixed(2),120,710)
-ctx.fillStyle="#64748b"
-ctx.font="26px Arial"
-ctx.fillText("Valor a pagar",120,750)
+ctx.font="bold 72px Arial"
+ctx.fillText("$"+Number(v.precio||0).toFixed(2),540,840)
+ctx.textAlign="left"
 
-// Línea divisoria
+// Bloque datos bancarios
+ctx.fillStyle="#f8fafc"
+ctx.roundRect(120,925,480,245,28)
+ctx.fill()
+
+ctx.fillStyle="#1e293b"
+ctx.font="bold 34px Arial"
+ctx.fillText("Datos bancarios",155,980)
+
+ctx.font="bold 23px Arial"
+ctx.fillStyle="#64748b"
+ctx.fillText("Banco",155,1030)
+ctx.fillText("Tipo de cuenta",155,1080)
+ctx.fillText("Número",155,1130)
+
+ctx.font="bold 25px Arial"
+ctx.fillStyle="#0f172a"
+ctx.fillText(u.banco||"-",330,1030)
+ctx.fillText(u.tipoCuenta||"Ahorros",330,1080)
+ctx.fillText(u.numeroCuenta||"-",330,1130)
+
+// Nombre de cuenta
+ctx.fillStyle="#f8fafc"
+ctx.roundRect(120,1195,840,80,24)
+ctx.fill()
+
+ctx.fillStyle="#64748b"
+ctx.font="bold 22px Arial"
+ctx.fillText("Nombre de la cuenta",155,1245)
+
+ctx.fillStyle="#0f172a"
+ctx.font="bold 28px Arial"
+textoMultilinea(ctx,u.nombreCuenta||"-",440,1245,480,34)
+
+// QR más grande
+if(qrImg){
+ctx.fillStyle="#ffffff"
+ctx.roundRect(640,925,320,320,28)
+ctx.fill()
+
 ctx.strokeStyle="#e2e8f0"
 ctx.lineWidth=3
-ctx.beginPath()
-ctx.moveTo(120,805)
-ctx.lineTo(960,805)
-ctx.stroke()
+ctx.strokeRect(662,947,276,276)
 
-// Datos bancarios
-ctx.fillStyle="#0f172a"
-ctx.font="bold 38px Arial"
-ctx.fillText("Cuenta bancaria",120,875)
-ctx.font="30px Arial"
-ctx.fillStyle="#334155"
-ctx.fillText("Banco: "+(u.banco||"-"),120,935)
-ctx.fillText("Tipo de cuenta: "+(u.tipoCuenta||"Ahorros"),120,985)
-ctx.fillText("Número: "+(u.numeroCuenta||"-"),120,1035)
-ctx.fillText("Nombre de cuenta:",120,1085)
-ctx.fillStyle="#0f172a"
-ctx.font="bold 34px Arial"
-textoMultilinea(ctx,u.nombreCuenta||"-",120,1130,520,42)
+ctx.drawImage(qrImg,675,960,250,250)
 
-// QR
-if(qrImg){
-ctx.fillStyle="#f8fafc"
-ctx.roundRect(675,855,250,250,24)
-ctx.fill()
-ctx.drawImage(qrImg,695,875,210,210)
 ctx.fillStyle="#64748b"
-ctx.font="24px Arial"
+ctx.font="bold 24px Arial"
 ctx.textAlign="center"
-ctx.fillText("QR de pago",800,1145)
+ctx.fillText("QR DE PAGO",800,1285)
 ctx.textAlign="left"
 }else{
-ctx.fillStyle="#f8fafc"
-ctx.roundRect(675,855,250,250,24)
+ctx.fillStyle="#ffffff"
+ctx.roundRect(640,925,320,320,28)
 ctx.fill()
+
 ctx.fillStyle="#94a3b8"
-ctx.font="26px Arial"
+ctx.font="bold 28px Arial"
 ctx.textAlign="center"
-ctx.fillText("Sin QR",800,985)
+ctx.fillText("Sin QR",800,1090)
 ctx.textAlign="left"
 }
 
 // Pie
 ctx.fillStyle="#64748b"
 ctx.font="24px Arial"
-ctx.fillText("Gracias por tu compra",120,1225)
+ctx.textAlign="center"
+ctx.fillText("Gracias por tu compra",540,1320)
+ctx.textAlign="left"
 
 const nombreCliente=String(v.cliente||"cliente").replace(/[^a-z0-9áéíóúñ_-]/gi,"_")
 descargarCanvas(canvas,"datos_pago_"+nombreCliente+".png")
@@ -1403,7 +1442,6 @@ descargarCanvas(canvas,"datos_pago_"+nombreCliente+".png")
 alert(e.message||mensajeFirebaseError(e))
 }
 }
-
 function editarVenta(id){
 
 let v=ventasCache.find(x=>x.id==id)
